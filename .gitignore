@@ -1,0 +1,15 @@
+node_modules
+dist
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+
+# Secrets — never commit these. If they were ever committed before, rotate
+# every key below immediately and scrub git history (git filter-repo / BFG).
+.env
+.env.*
+!.env.example
+firebase-service-account.json
+*.pem
+*.key.local

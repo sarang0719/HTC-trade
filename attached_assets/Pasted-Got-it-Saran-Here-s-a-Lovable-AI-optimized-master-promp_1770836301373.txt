@@ -1,0 +1,275 @@
+Got it, Saran 👍
+Here’s a **Lovable AI–optimized master prompt** for building your **full trading platform** (like Groww / INDmoney).
+
+Lovable works best with **clear product specs + user flows + UI direction**, so this version is structured for it.
+
+---
+
+# 🚀 MASTER PROMPT FOR LOVABLE AI
+
+Copy everything below and paste into Lovable 👇
+
+---
+
+## ✅ PROMPT FOR LOVABLE
+
+Build a **modern, premium multi-asset trading platform** for Web and iOS (Flutter-ready architecture) similar to Groww and INDmoney.
+
+The platform must support:
+
+* Indian Stocks (NSE/BSE)
+* International Stocks (US/Global markets)
+* Forex trading
+* ETFs & Mutual Funds
+* (Optional) Crypto module
+
+The product should feel like a **high-trust fintech app for serious investors**.
+
+---
+
+# 🎯 PRODUCT VISION
+
+Design a secure, scalable, and beginner-friendly trading ecosystem where users can:
+
+* Invest globally
+* Track portfolio performance
+* Learn investing
+* Use AI-powered insights
+* Trade easily with minimal friction
+
+Focus on **simplicity + premium feel + trust**.
+
+---
+
+# 🎨 UI/UX DESIGN
+
+Style:
+
+* Premium fintech look
+* Minimal & clean layout
+* Smooth micro-interactions
+* Glassmorphism + soft shadows
+* Modern typography
+* Mobile-first responsive design
+
+Themes:
+
+* Light Mode + Dark Mode
+* Primary colors: Deep Blue / Emerald Green
+* Profit = Green
+* Loss = Red
+* Neutral backgrounds
+
+Reference feel:
+
+* Groww
+* INDmoney
+* Zerodha Kite
+
+---
+
+# 🔐 AUTHENTICATION
+
+Include full auth flows:
+
+* Email/password signup
+* Google login
+* Apple login
+* OTP verification
+* Forgot password
+* Biometric login for iOS
+* Two-factor authentication
+* KYC verification flow
+
+---
+
+# 🏠 DASHBOARD
+
+Dashboard must show:
+
+* Total portfolio value
+* Today’s P&L
+* Total returns
+* Asset allocation chart
+* Watchlist
+* Top gainers & losers
+* Global indices (Nifty, Sensex, NASDAQ, Dow Jones)
+* Financial news feed
+
+---
+
+# 📈 TRADING FEATURES
+
+Allow users to:
+
+* Buy/Sell assets
+* Market/Limit/Stop-loss orders
+* Intraday & delivery trades
+* Live candlestick charts
+* Indicators (RSI, MACD, Moving Average)
+* Real-time price updates
+* Price alerts
+* Order history
+* Watchlists
+
+---
+
+# 💱 FOREX MODULE
+
+Include:
+
+* Major/minor pairs
+* Live exchange rates
+* Advanced charts
+* Quick buy/sell
+* Currency converter
+
+---
+
+# 🌍 INTERNATIONAL MARKETS
+
+Support:
+
+* US stocks (NYSE/NASDAQ)
+* Fractional investing
+* Market time awareness
+* Global news
+
+---
+
+# 💼 PORTFOLIO MANAGEMENT
+
+Provide:
+
+* Holdings breakdown
+* Profit/Loss analytics
+* Diversification score
+* Performance history
+* Tax summary
+
+---
+
+# 🧠 AI FEATURES
+
+Integrate AI:
+
+* Smart stock suggestions
+* Risk scoring
+* Personalized insights
+* AI chatbot for investing help
+* Market trend insights
+* Portfolio health score
+
+---
+
+# 💳 WALLET SYSTEM
+
+Include:
+
+* In-app wallet
+* UPI/Bank transfers
+* Deposit/Withdraw
+* Transaction history
+* SIP/auto-invest
+
+---
+
+# 🔔 NOTIFICATIONS
+
+Push notifications for:
+
+* Price alerts
+* Trade confirmations
+* News alerts
+* AI suggestions
+
+---
+
+# 📰 LEARNING HUB
+
+Add:
+
+* Beginner guides
+* Tutorials
+* Market explainers
+* Investment tips
+
+---
+
+# ⚙️ ADMIN PANEL
+
+Admin can:
+
+* Manage users
+* Approve KYC
+* Monitor transactions
+* View analytics
+* Manage listings
+
+---
+
+# 🛠️ TECH DIRECTION
+
+Frontend:
+
+* Flutter-ready architecture
+* Responsive UI
+* Smooth animations
+
+Backend:
+
+* Node.js or Django
+* REST/GraphQL APIs
+* WebSockets for real-time prices
+
+Database:
+
+* PostgreSQL or MongoDB
+
+Security:
+
+* JWT authentication
+* Encryption
+* Fraud detection
+* Role-based access
+
+---
+
+# 💎 PREMIUM FEATURES
+
+* Social/copy trading
+* Trader leaderboard
+* Community discussions
+* Goal-based investing
+* Robo-advisor mode
+
+---
+
+# 🎯 GOAL
+
+Generate:
+
+* Complete product structure
+* UI layouts
+* User flows
+* Backend architecture
+* Scalable system design
+
+The result should look like a **top-tier fintech startup product ready for launch**.
+
+---
+
+## ✅ END PROMPT
+
+---
+
+If you want, I can also give:
+
+🔥 Lovable AI **Ultra Prompt v2 (startup-grade)**
+🔥 MVP version (build fast)
+🔥 Monetization plan
+🔥 Legal checklist for India
+🔥 Real-time market API list
+🔥 Exact Flutter UI wireframes
+
+Just tell me 👍

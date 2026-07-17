@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "auto_trade_amount" varchar DEFAULT '5.00';

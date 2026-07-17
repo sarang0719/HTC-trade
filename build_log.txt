@@ -1,0 +1,37 @@
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.1 building client environment for production...
+transforming...
+✓ 2845 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/index.html                               2.01 kB │ gzip:   0.76 kB
+../dist/assets/index-C7y78zw-.css              127.63 kB │ gzip:  19.39 kB
+../dist/assets/candle-predictor-BO8wIn9s.js      8.18 kB │ gzip:   3.61 kB
+../dist/assets/index-BZpRMUfU.js             1,464.62 kB │ gzip: 419.25 kB
+✓ built in 3.02s
+building server...
+✘ [ERROR] Unexpected ")"
+
+    server/routes.ts:191:3:
+      191 │   });
+          ╵    ^
+
+Error: Build failed with 1 error:
+server/routes.ts:191:3: ERROR: Unexpected ")"
+    at failureErrorWithLog (/Users/sarang/Downloads/AI-Optimized-Master/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/sarang/Downloads/AI-Optimized-Master/node_modules/esbuild/lib/main.js:926:25
+    at /Users/sarang/Downloads/AI-Optimized-Master/node_modules/esbuild/lib/main.js:878:52
+    at buildResponseToResult (/Users/sarang/Downloads/AI-Optimized-Master/node_modules/esbuild/lib/main.js:924:7)
+    at /Users/sarang/Downloads/AI-Optimized-Master/node_modules/esbuild/lib/main.js:951:16
+    at responseCallbacks.<computed> (/Users/sarang/Downloads/AI-Optimized-Master/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/Users/sarang/Downloads/AI-Optimized-Master/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/Users/sarang/Downloads/AI-Optimized-Master/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:559:12) {
+  errors: [Getter/Setter],
+  warnings: [Getter/Setter]
+}

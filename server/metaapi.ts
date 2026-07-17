@@ -1,0 +1,29 @@
+import MetaApi from "metaapi.cloud-sdk";
+
+const METAAPI_TOKEN = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI4MmU5NWYwMjcwOTk3ZGIxNGI4NWI4YjI4YjU2MmI2OSIsImFjY2Vzc1J1bGVzIjpbeyJpZCI6InRyYWRpbmctYWNjb3VudC1tYW5hZ2VtZW50LWFwaSIsIm1ldGhvZHMiOlsidHJhZGluZy1hY2NvdW50LW1hbmFnZW1lbnQtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVzdC1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcnBjLWFwaSIsIm1ldGhvZHMiOlsibWV0YWFwaS1hcGk6d3M6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6Im1ldGFhcGktcmVhbC10aW1lLXN0cmVhbWluZy1hcGkiLCJtZXRob2RzIjpbIm1ldGFhcGktYXBpOndzOnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJtZXRhc3RhdHMtYXBpIiwibWV0aG9kcyI6WyJtZXRhc3RhdHMtYXBpOnJlc3Q6cHVibGljOio6KiJdLCJyb2xlcyI6WyJyZWFkZXIiLCJ3cml0ZXIiXSwicmVzb3VyY2VzIjpbIio6JFVTRVJfSUQkOioiXX0seyJpZCI6InJpc2stbWFuYWdlbWVudC1hcGkiLCJtZXRob2RzIjpbInJpc2stbWFuYWdlbWVudC1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoiY29weWZhY3RvcnktYXBpIiwibWV0aG9kcyI6WyJjb3B5ZmFjdG9yeS1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciIsIndyaXRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfSx7ImlkIjoibXQtbWFuYWdlci1hcGkiLCJtZXRob2RzIjpbIm10LW1hbmFnZXItYXBpOnJlc3Q6ZGVhbGluZzoqOioiLCJtdC1tYW5hZ2VyLWFwaTpyZXN0OnB1YmxpYzoqOioiXSwicm9sZXMiOlsicmVhZGVyIiwid3JpdGVyIl0sInJlc291cmNlcyI6WyIqOiRVU0VSX0lEJDoqIl19LHsiaWQiOiJiaWxsaW5nLWFwaSIsIm1ldGhvZHMiOlsiYmlsbGluZy1hcGk6cmVzdDpwdWJsaWM6KjoqIl0sInJvbGVzIjpbInJlYWRlciJdLCJyZXNvdXJjZXMiOlsiKjokVVNFUl9JRCQ6KiJdfV0sImlnbm9yZVJhdGVMaW1pdHMiOmZhbHNlLCJ0b2tlbklkIjoiMjAyMTAyMTMiLCJpbXBlcnNvbmF0ZWQiOmZhbHNlLCJyZWFsVXNlcklkIjoiODJlOTVmMDI3MDk5N2RiMTRiODViOGIyOGI1NjJiNjkiLCJpYXQiOjE3NzUwMzE0OTZ9.AYoB9M19nYAApZase3CXhQ5pMGTLPq1j4TkFCOGehqCzt29k-FZJp2khk9u1mqSKDf2UXAs2ZLX8v3rJ4rwukjoZ1QdTgxtwzLo9LzAbObKyaVCpmOeWN-bX95MPs81Zz9FrDMunioUGfw-4tBb0cYutD-mqqtvhzxFzrxE9L2v0SdzuLReZ7jMo5G0eC-CiA7QuQrOmmaCXbMElkHQRTzISbd0aL3_R3yfOaA2g9rsjx0k3zrqqX9815HMnO3rnFWp_QdZkVuiugy6qeMT-qjvusYifvqeM7WoaLicQGVTdKm8mu9FDE_u12vmPo2oFxCg9yP1BPr_yX1sNytHFrumZgPAqXoRahpjZ5c9iLEFFcJLJ7As7hCN0FxKtKsfTvmnhGanNhzPusv0jQd4zTjfUD7_lUNIP_Tvm-FDFkvdFAPHqIiOGW0IAzdN44G3aWyUEjlRHKhbIFPdLBqEny9moodHzbRMFBnC1rjmCcXNpOJxkFnjd02h9RYG4rqy3Hd402DHItpzVYJAJ6y8F2l5Mm8Cu7CQS2Fg8cFL4wShiRGo-i7AmsVtSbgHZVCOy9FS8ZC8t1HGbrBqY-74bQYJd6jeCPwSLnMpasnnhzI1eIGuQYpy99gbDlmGtRHvzJVu9Ljvy1k0l43IkE6Oexw-2Kus2vtcMqYqkVDDuWbk";
+
+const api = new MetaApi(METAAPI_TOKEN);
+
+export async function getMT5HistoricalData(symbol: string, timeframe: string) {
+  try {
+    // Attempting to fetch MT5 Accounts using raw fetch since the SDK doesn't expose a simple getAccounts
+    const res = await fetch("https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts", {
+       headers: { "auth-token": METAAPI_TOKEN }
+    });
+    const accounts = await res.json();
+    
+    if (!Array.isArray(accounts) || accounts.length === 0) {
+      // Currently, the token doesn't have an attached MetaTrader account
+      // Returning empty array so frontend falls back to proxy source or mock.
+      return [];
+    }
+    
+    // Attempt to use the first active MT5 account
+    const deployedAccount = accounts.find((a: any) => a.state === 'DEPLOYED') || accounts[0];
+    return []; // We don't have a deployed MT5 account yet, fall back for now
+  } catch (error) {
+    console.error("MetaTrader 5 API Fetch Error:", error);
+    return [];
+  }
+}
+
