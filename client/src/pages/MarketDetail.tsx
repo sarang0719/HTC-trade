@@ -406,14 +406,7 @@ export default function MarketDetail() {
   }, [optimizedWeights]);
 
   const handleTrainAI = () => {
-    if (candlesRef.current?.length < 52) {
-      toast({
-        title: "Insufficient History",
-        description: "Need at least 52 candles in history to train the model.",
-        variant: "destructive"
-      });
-      return;
-    }
+    const history = candlesRef.current || [];
     setIsTraining(true);
     setTrainingProgress(0);
 
@@ -778,13 +771,13 @@ export default function MarketDetail() {
     };
 
     // Run immediately on existing candles (if any)
-    if (candlesRef.current?.length >= 53) {
+    if (candlesRef.current?.length >= 5) {
       runPredictor(candlesRef.current);
     }
 
     // Check every 1000ms — triggers predictor when candle shifts
     const v17Monitor = setInterval(() => {
-      if (candlesRef.current?.length >= 53) {
+      if (candlesRef.current?.length >= 5) {
         runPredictor(candlesRef.current);
       }
     }, 1000);
