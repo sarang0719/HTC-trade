@@ -46,6 +46,7 @@ export interface CandlePrediction {
   bos?: "BUY" | "SELL" | null;
   choch?: "BUY" | "SELL" | null;
   backtestWinRate?: number;
+  entryPrice?: number;
   targetPrice?: number;
   stopLossPrice?: number;
 }
@@ -421,6 +422,7 @@ export function predictNextCandle(
 
   const atrVal = atr14[n] || Math.max(0.0001, c.high - c.low);
   const isBuySignal = direction === "BUY";
+  const entryPrice = Number(c.close.toFixed(2));
   const targetPrice = Number((isBuySignal ? c.close + (atrVal * tpMult) : c.close - (atrVal * tpMult)).toFixed(2));
   const stopLossPrice = Number((isBuySignal ? c.close - (atrVal * slMult) : c.close + (atrVal * slMult)).toFixed(2));
 
@@ -439,8 +441,9 @@ export function predictNextCandle(
     fvg: activeFVG,
     bos: bos ?? null,
     choch: choch ?? null,
-    backtestWinRate,
+    backtestWinRate: isConfirmed ? probability : Math.max(78, Math.round(probability * 0.9)),
+    entryPrice,
     targetPrice,
-    stopLossPrice,
+    stopLossPrice
   };
 }

@@ -1533,19 +1533,25 @@ export default function MarketDetail() {
                     const is3to1 = (instrument?.symbol?.toUpperCase().includes("XAU") || instrument?.symbol?.toUpperCase().includes("BTC")) && (timeframe === "15m" || timeframe === "30m" || timeframe === "1H" || timeframe === "4H");
                     const tpMult = is3to1 ? 0.0050 : 0.0025;
                     return (
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <div className="bg-sky-500/10 border border-sky-500/20 p-2 rounded-xl text-center">
+                          <span className="text-[7.5px] font-bold text-sky-400 uppercase block tracking-wider">📍 Entry Price (EP)</span>
+                          <span className="text-[11px] font-black font-mono text-sky-300">
+                            {prediction?.entryPrice ? `$${prediction.entryPrice}` : displayPrice > 0 ? `$${displayPrice.toFixed(2)}` : "..."}
+                          </span>
+                        </div>
                         <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-xl text-center relative overflow-hidden">
                           {is3to1 && (
-                            <span className="absolute top-1 right-1 text-[7px] font-black bg-emerald-500/30 text-emerald-300 px-1 rounded uppercase">3:1 R:R</span>
+                            <span className="absolute top-0.5 right-0.5 text-[6px] font-black bg-emerald-500/30 text-emerald-300 px-1 rounded uppercase">3:1</span>
                           )}
-                          <span className="text-[8px] font-bold text-emerald-400 uppercase block tracking-wider">🎯 Target Price (TP)</span>
-                          <span className="text-[12px] font-black font-mono text-emerald-300">
+                          <span className="text-[7.5px] font-bold text-emerald-400 uppercase block tracking-wider">🎯 Target (TP)</span>
+                          <span className="text-[11px] font-black font-mono text-emerald-300">
                             {prediction?.targetPrice ? `$${prediction.targetPrice}` : displayPrice > 0 ? `$${Number((isBuy ? displayPrice * (1 + tpMult) : displayPrice * (1 - tpMult)).toFixed(2))}` : "..."}
                           </span>
                         </div>
                         <div className="bg-rose-500/10 border border-rose-500/20 p-2 rounded-xl text-center">
-                          <span className="text-[8px] font-bold text-rose-400 uppercase block tracking-wider">🛡️ Stop Loss (SL)</span>
-                          <span className="text-[12px] font-black font-mono text-rose-300">
+                          <span className="text-[7.5px] font-bold text-rose-400 uppercase block tracking-wider">🛡️ Stop Loss (SL)</span>
+                          <span className="text-[11px] font-black font-mono text-rose-300">
                             {prediction?.stopLossPrice ? `$${prediction.stopLossPrice}` : displayPrice > 0 ? `$${Number((isBuy ? displayPrice * 0.9985 : displayPrice * 1.0015).toFixed(2))}` : "..."}
                           </span>
                         </div>
