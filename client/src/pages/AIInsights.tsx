@@ -15,6 +15,7 @@ import { useLocation } from "wouter";
 import StrategyPanel from "@/components/StrategyPanel";
 import SmartAutoPilot from "@/components/SmartAutoPilot";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/hooks/use-auth";
 
 function niceTime(s: string) {
   const d = new Date(s);
@@ -23,8 +24,18 @@ function niceTime(s: string) {
 }
 
 export default function AIInsights() {
+  const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [, setLoc] = useLocation();
+
+  // Redirect non-admins
+  const isMaster = currentUser?.email === "saran123@gmail.com";
+  const isOperator = currentUser?.email === "htctrade123@gmail.com";
+
+  if (currentUser && !isMaster && !isOperator) {
+     setLoc("/app");
+     return null;
+  }
 
   // Strategy scanner state
   const [scanInput,  setScanInput]    = useState("XAUUSD");

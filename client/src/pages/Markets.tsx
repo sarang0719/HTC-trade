@@ -176,7 +176,8 @@ export default function Markets() {
       }).join(",");
 
       try {
-        wsTwelve = new WebSocket("wss://ws.twelvedata.com/v1/quotes/price?apikey=4a3bb708bb7247528d0efe958476bdaa");
+        const apiKey = import.meta.env.VITE_TWELVEDATA_API_KEY || "4a3bb708bb7247528d0efe958476bdaa";
+        wsTwelve = new WebSocket(`wss://ws.twelvedata.com/v1/quotes/price?apikey=${apiKey}`);
 
         wsTwelve.onopen = () => {
           twelveDelay = 1000;
@@ -233,21 +234,27 @@ export default function Markets() {
       if (binanceRecoTimer) clearTimeout(binanceRecoTimer);
       if (twelveRecoTimer)  clearTimeout(twelveRecoTimer);
       if (wsBinance) {
-        wsBinance.onclose = null;
-        wsBinance.onerror = null;
-        if (wsBinance.readyState !== WebSocket.CLOSED) {
-          try {
-            wsBinance.close();
-          } catch {}
+        const socket = wsBinance;
+        socket.onclose = null;
+        socket.onerror = null;
+        if (socket.readyState === WebSocket.CONNECTING) {
+          socket.onopen = () => {
+            try { socket.close(); } catch {}
+          };
+        } else if (socket.readyState === WebSocket.OPEN) {
+          try { socket.close(); } catch {}
         }
       }
       if (wsTwelve) {
-        wsTwelve.onclose = null;
-        wsTwelve.onerror = null;
-        if (wsTwelve.readyState !== WebSocket.CLOSED) {
-          try {
-            wsTwelve.close();
-          } catch {}
+        const socket = wsTwelve;
+        socket.onclose = null;
+        socket.onerror = null;
+        if (socket.readyState === WebSocket.CONNECTING) {
+          socket.onopen = () => {
+            try { socket.close(); } catch {}
+          };
+        } else if (socket.readyState === WebSocket.OPEN) {
+          try { socket.close(); } catch {}
         }
       }
     };

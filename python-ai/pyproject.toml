@@ -1,0 +1,6 @@
+[tool.pyright]
+include = ["."]
+extraPaths = [
+    "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages",
+    "venv/lib/python3.13/site-packages"
+]

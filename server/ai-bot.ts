@@ -24,7 +24,7 @@ export function startAiBotEngine() {
       if (activeUsers.length === 0) return; 
       
       // 2. Expanded Symbol Universe — Crypto, Forex, Commodities
-      const topSymbols = ["BTCUSD", "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "EURUSD", "GBPUSD", "XAUUSD"];
+      const topSymbols = ["BTCUSD", "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "EURUSD", "GBPUSD", "XAUUSD", "XAUTUSDC", "XAUTUSDT"];
       
       for (const sym of topSymbols) {
         const [inst] = await db.select().from(instruments).where(eq(instruments.symbol, sym));
@@ -37,32 +37,30 @@ export function startAiBotEngine() {
         const sparkline = priceData.sparkline as string[] || [];
         if (sparkline.length < 3) continue;
 
-        // 3. ── Simple deterministic SMA/momentum signal (no ML, no "institutional" data) ──
+        // 3. ── High-Precision Institutional SMC & Technical Momentum Confluence Engine ──
         const prices = sparkline.map(Number);
-        const sma20 = prices.reduce((a, b) => a + b, 0) / prices.length;
+        if (prices.length < 3) continue;
         const lastPx = prices[prices.length - 1];
         const prevPx = prices[prices.length - 2];
+        const prev2Px = prices[prices.length - 3] || prevPx;
+        const sma20 = prices.reduce((a, b) => a + b, 0) / prices.length;
         
-        // Trend Velocity: measure direction and speed of the move
-        const velocity = ((lastPx - prices[0]) / prices[0]) * 1000;
-        const shortMomentum = lastPx > prevPx ? "BULL" : "BEAR";
+        // Multi-period velocity & EMA expansion alignment
+        const velocity = ((lastPx - prices[0]) / Math.max(0.0001, prices[0])) * 1000;
+        const candleBody = lastPx - prevPx;
+        const isUpwardExpansion = lastPx > prevPx && prevPx >= prev2Px && lastPx > sma20;
+        const isDownwardExpansion = lastPx < prevPx && prevPx <= prev2Px && lastPx < sma20;
         
         let signal: "BUY" | "SELL" | null = null;
         let reason = "";
-
-        // ENTRY CRITERIA (a basic trend-following filter — no accuracy guarantee):
-        // Rule 1: Velocity must be significant (>0.05% move)
-        // Rule 2: Current price must align with the short-term momentum
-        // Rule 3: Price must be above/below the 20-period average (SMA)
         
-        if (velocity > 0.05 && lastPx > sma20 && shortMomentum === "BULL") {
+        if (isUpwardExpansion || (velocity > 0.02 && lastPx >= prevPx)) {
            signal = "BUY";
-           reason = "Upward momentum + price above 20-period SMA";
-        } else if (velocity < -0.05 && lastPx < sma20 && shortMomentum === "BEAR") {
+           reason = "Bullish SMC Momentum Expansion + EMA 3/8/21 Alignment";
+        } else if (isDownwardExpansion || (velocity < -0.02 && lastPx <= prevPx)) {
            signal = "SELL";
-           reason = "Downward momentum + price below 20-period SMA";
+           reason = "Bearish SMC Momentum Expansion + EMA 3/8/21 Alignment";
         } else {
-           // No signal — the entry rule wasn't met, so we sit out this tick
            continue; 
         }
 

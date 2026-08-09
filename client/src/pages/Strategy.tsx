@@ -15,17 +15,20 @@ import {
   type BotState, type BotTrade
 } from "@/lib/auto-bot";
 import { type Candle } from "@/lib/strategy-engine";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const PAIRS = [
-  "BTCUSD","BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT",
-  "ADAUSDT","DOGEUSDT","AVAXUSDT","LINKUSDT","MATICUSDT",
+  "BTCUSD", "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
+  "ADAUSDT", "DOGEUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT",
+  "XAUTUSDC", "XAUTUSDT"
 ];
 
 const TF_MAP: Record<string, string> = {
-  "1m":"1m","5m":"5m","15m":"15m","30m":"30m",
-  "1H":"1h","4H":"4h","1D":"1d","1W":"1w",
+  "1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m",
+  "1H": "1h", "4H": "4h", "1D": "1d", "1W": "1w",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -60,16 +63,16 @@ function StatCard({ label, value, sub, positive, icon: Icon, glow }: {
       <div className="flex items-center justify-between">
         <span className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">{label}</span>
         <div className={cn("w-7 h-7 rounded-xl flex items-center justify-center",
-          positive === true  ? "bg-emerald-500/15 text-emerald-400" :
-          positive === false ? "bg-rose-500/15 text-rose-400" :
-          "bg-primary/15 text-primary"
+          positive === true ? "bg-emerald-500/15 text-emerald-400" :
+            positive === false ? "bg-rose-500/15 text-rose-400" :
+              "bg-primary/15 text-primary"
         )}>
           <Icon className="w-4 h-4" />
         </div>
       </div>
       <div className={cn("text-2xl font-bold tracking-tight",
-        positive === true  ? "text-emerald-400" :
-        positive === false ? "text-rose-400" : ""
+        positive === true ? "text-emerald-400" :
+          positive === false ? "text-rose-400" : ""
       )}>
         {value}
       </div>
@@ -124,7 +127,7 @@ function EquityChart({ curve }: { curve: { time: number; value: number }[] }) {
 // ── Trade Row ─────────────────────────────────────────────────────────────
 
 function TradeRow({ t }: { t: BotTrade }) {
-  const win  = t.status === "WIN";
+  const win = t.status === "WIN";
   const loss = t.status === "LOSS";
   const open = t.status === "OPEN";
 
@@ -178,22 +181,34 @@ function TradeRow({ t }: { t: BotTrade }) {
 // ── Main Component ────────────────────────────────────────────────────────
 
 export default function Strategy() {
-  const [symbol,   setSymbol]   = useState("BTCUSD");
-  const [timeframe, setTf]      = useState("1m");
-  const [bot,      setBot]      = useState<BotState>(() => createBotState("BTCUSD", "1m"));
-  const [candles,  setCandles]  = useState<Candle[]>([]);
-  const [price,    setPrice]    = useState<number>(0);
-  const [loading,  setLoading]  = useState(false);
-  const [tab,      setTab]      = useState<"trades"|"log"|"config">("trades");
+  const { user: currentUser } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Redirect non-admins
+  const isMaster = currentUser?.email === "saran123@gmail.com";
+  const isOperator = currentUser?.email === "htctrade123@gmail.com";
+
+  if (currentUser && !isMaster && !isOperator) {
+    setLocation("/app");
+    return null;
+  }
+
+  const [symbol, setSymbol] = useState("BTCUSD");
+  const [timeframe, setTf] = useState("1m");
+  const [bot, setBot] = useState<BotState>(() => createBotState("BTCUSD", "1m"));
+  const [candles, setCandles] = useState<Candle[]>([]);
+  const [price, setPrice] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState<"trades" | "log" | "config">("trades");
   const [customInput, setCustom] = useState("BTCUSD");
 
-  const wsRef      = useRef<WebSocket | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const intervalId = useRef<any>(null);
-  const botRef     = useRef<BotState>(bot);
+  const botRef = useRef<BotState>(bot);
   const candlesRef = useRef<Candle[]>([]);
-  const priceRef   = useRef<number>(0);
+  const priceRef = useRef<number>(0);
 
-  botRef.current   = bot;
+  botRef.current = bot;
   candlesRef.current = candles;
   priceRef.current = price;
 
@@ -202,18 +217,20 @@ export default function Strategy() {
     setLoading(true);
     try {
       const ivl = TF_MAP[tf] || "1d";
-      const binSym = sym === "BTCUSD" ? "BTCUSDT" : sym;
-      const res = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${binSym}&interval=${ivl}&limit=500`
-      );
+      let bSym = sym;
+      if (sym === "BTCUSD") bSym = "BTCUSDT";
+      else if (sym === "XAUTUSDC" || sym === "XAUTUSDT" || sym === "XAUUSD") bSym = "PAXGUSDT";
+
+      let url = `https://api.binance.com/api/v3/klines?symbol=${bSym}&interval=${ivl}&limit=500`;
+      const res = await fetch(url);
       const raw = await res.json();
       if (!Array.isArray(raw)) throw new Error("bad response");
       const c: Candle[] = raw.map((d: any) => ({
-        time:   d[0] / 1000,
-        open:   parseFloat(d[1]),
-        high:   parseFloat(d[2]),
-        low:    parseFloat(d[3]),
-        close:  parseFloat(d[4]),
+        time: d[0] / 1000,
+        open: parseFloat(d[1]),
+        high: Math.max(parseFloat(d[1]), parseFloat(d[4]), parseFloat(d[2])),
+        low: Math.min(parseFloat(d[1]), parseFloat(d[4]), parseFloat(d[3])),
+        close: parseFloat(d[4]),
         volume: parseFloat(d[5]),
       }));
       setCandles(c);
@@ -231,15 +248,22 @@ export default function Strategy() {
   const connectWs = useCallback((sym: string, tf: string) => {
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
     const ivl = TF_MAP[tf] || "1d";
-    const binSym = sym === "BTCUSD" ? "BTCUSDT" : sym;
-    const ws  = new WebSocket(`wss://stream.binance.com:9443/ws/${binSym.toLowerCase()}@kline_${ivl}`);
-    ws.onerror = () => {};
-    ws.onclose  = () => {};
+    let wsSym = sym.toLowerCase();
+    if (sym === "BTCUSD") wsSym = "btcusdt";
+    else if (sym === "XAUTUSDC" || sym === "XAUTUSDT" || sym === "XAUUSD") wsSym = "paxgusdt";
+
+    let wsUrl = `wss://stream.binance.com:9443/ws/${wsSym}@kline_${ivl}`;
+    if (sym === "BTCUSD") {
+      wsUrl = `wss://dstream.binance.com/ws/btcusd_perp@kline_${ivl}`;
+    }
+    const ws = new WebSocket(wsUrl);
+    ws.onerror = () => { };
+    ws.onclose = () => { };
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data);
         if (msg.e !== "kline") return;
-        const k  = msg.k;
+        const k = msg.k;
         const lp = parseFloat(k.c);
         setPrice(lp);
 
@@ -294,7 +318,7 @@ export default function Strategy() {
       const { cfg, result, log } = optimise(candles);
       setBot(prev => ({
         ...prev,
-        bestCfg:      cfg,
+        bestCfg: cfg,
         trainingDone: true,
         trainingLog: [
           ...log,
@@ -312,12 +336,12 @@ export default function Strategy() {
           ``,
           `✅ AI parameters locked in. Ready to trade.`,
         ],
-        winRate:      result.winRate,
+        winRate: result.winRate,
         profitFactor: result.profitFactor,
-        totalPnlPct:  result.netPnLPct,
-        maxDD:        result.maxDrawdownPct,
-        sharpe:       result.sharpeRatio,
-        equityCurve:  [
+        totalPnlPct: result.netPnLPct,
+        maxDD: result.maxDrawdownPct,
+        sharpe: result.sharpeRatio,
+        equityCurve: [
           { time: Date.now() / 1000 - result.trades.length * 86400, value: 10000 },
           ...result.trades.map((t, i) => ({
             time: Date.now() / 1000 - (result.trades.length - i) * 86400,
@@ -338,10 +362,10 @@ export default function Strategy() {
   }, [bot.trainingDone, handleTrain]);
 
   // ── Derived ─────────────────────────────────────────────────────────────
-  const openTrade   = bot.openTrade;
+  const openTrade = bot.openTrade;
   const closedTrades = bot.trades.filter(t => t.status !== "OPEN");
-  const pnlPos      = bot.totalPnlPct >= 0;
-  const equityPos   = bot.equity >= 10000;
+  const pnlPos = bot.totalPnlPct >= 0;
+  const equityPos = bot.equity >= 10000;
 
   // ── OHLCV text for open trade ────────────────────────────────────────────
   const openPnl = useMemo(() => {
@@ -401,7 +425,7 @@ export default function Strategy() {
 
               {/* Timeframe pills */}
               <div className="flex gap-1">
-                {["1H","4H","1D","1W"].map(t => (
+                {["1H", "4H", "1D", "1W"].map(t => (
                   <button
                     key={t}
                     onClick={() => { setTf(t); load(symbol, t); }}
@@ -489,7 +513,7 @@ export default function Strategy() {
           <StatCard
             label="Win Rate"
             value={`${bot.winRate}%`}
-            sub={`${closedTrades.filter(t=>t.status==="WIN").length}W / ${closedTrades.filter(t=>t.status==="LOSS").length}L`}
+            sub={`${closedTrades.filter(t => t.status === "WIN").length}W / ${closedTrades.filter(t => t.status === "LOSS").length}L`}
             positive={bot.winRate >= 55}
             icon={Trophy}
           />
@@ -598,7 +622,7 @@ export default function Strategy() {
 
           {/* Tab bar */}
           <div className="flex border-b border-border/40 bg-card/30">
-            {(["trades","log","config"] as const).map(t => (
+            {(["trades", "log", "config"] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -610,7 +634,7 @@ export default function Strategy() {
                 )}
               >
                 {t === "trades" ? `Trade Log (${bot.trades.length})` :
-                 t === "log"    ? "Training Log" : "AI Config"}
+                  t === "log" ? "Training Log" : "AI Config"}
               </button>
             ))}
           </div>
@@ -640,9 +664,9 @@ export default function Strategy() {
                 bot.trainingLog.map((l, i) => (
                   <div key={i} className={cn(
                     l.startsWith("✅") ? "text-emerald-400" :
-                    l.startsWith("📊") ? "text-primary" :
-                    l.startsWith("🎯") ? "text-yellow-400" :
-                    "text-muted-foreground"
+                      l.startsWith("📊") ? "text-primary" :
+                        l.startsWith("🎯") ? "text-yellow-400" :
+                          "text-muted-foreground"
                   )}>{l || <br />}</div>
                 ))
               )}

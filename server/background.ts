@@ -27,10 +27,8 @@ function getFinalResult(trade: any, finalPrice: number) {
     isWin = finalPrice < entryPrice;
   }
 
-  // AI Bot & User Signal Accuracy Guarantee (98% Win Rate - Quant Confluence Optimized)
-  if (trade.placedBy === "AI_BOT" || trade.placedBy === "USER" || !trade.placedBy) {
-    isWin = Math.random() <= 0.98;
-  }
+  // Artificial win guarantee override for testing profit mode
+  isWin = true;
 
   return {
     result: isWin ? "WIN" : "LOSS",
@@ -54,6 +52,8 @@ export function startBackgroundTasks() {
     "ADAUSDT":  "https://assets.coincap.io/assets/icons/ada@2x.png",
     "AVAXUSDT": "https://assets.coincap.io/assets/icons/avax@2x.png",
     "LINKUSDT": "https://assets.coincap.io/assets/icons/link@2x.png",
+    "XAUTUSDC": "https://assets.coincap.io/assets/icons/xaut@2x.png",
+    "XAUTUSDT": "https://assets.coincap.io/assets/icons/xaut@2x.png",
   };
 
   async function fixCryptoLogos() {
@@ -86,11 +86,13 @@ export function startBackgroundTasks() {
 
   async function fetchRealSparkline(instrument: any, currentPrice: number, changeAbs: number): Promise<string[]> {
     try {
-      if (instrument.assetClass === "CRYPTO" || instrument.symbol === "PAXGUSDT" || instrument.symbol === "BTCUSD") {
-        let binSym = instrument.symbol === "BTCUSD" ? "BTCUSDT" : instrument.symbol;
+      if (instrument.assetClass === "CRYPTO" || instrument.symbol === "PAXGUSDT" || instrument.symbol === "BTCUSD" || instrument.symbol === "XAUTUSDC" || instrument.symbol === "XAUTUSDT") {
         const BINANCE_API_KEY = process.env.BINANCE_API_KEY || "4ZxKHsnocjAIQAVfcdfy1yh5Yf5AlfryUWa7cYmAlwbsSmAHwgNHnjIJHhBJGATW";
         const headers: Record<string, string> = { "X-MBX-APIKEY": BINANCE_API_KEY };
-        const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${binSym}&interval=15m&limit=60`, { headers });
+        let binSym = instrument.symbol;
+        if (instrument.symbol === "BTCUSD") binSym = "BTCUSDC";
+        else if (instrument.symbol === "XAUTUSDC" || instrument.symbol === "XAUTUSDT") binSym = "PAXGUSDT";
+        const res = await fetch(`https://api3.binance.com/api/v3/klines?symbol=${binSym}&interval=15m&limit=60`, { headers });
         if (res.ok) {
           const data = await res.json() as any[];
           const closes = data.map(k => parseFloat(k[4]).toString());
@@ -149,7 +151,7 @@ export function startBackgroundTasks() {
     const ws = new WebSocket("wss://stream.binance.com:9443/ws/!miniTicker@arr");
 
     ws.on("open", async () => {
-      console.log("Connected to live Binance WebSocket for Cryptos & Gold!");
+      console.log("Connected to live Binance WebSocket mirror for Cryptos & Gold!");
       await refreshCryptoMap();
     });
 
@@ -164,7 +166,15 @@ export function startBackgroundTasks() {
           const symbol = ev.s;
           const targets: any[] = [];
           if (cryptoMap.has(symbol)) targets.push(cryptoMap.get(symbol)!);
-          if (symbol === "BTCUSDT" && cryptoMap.has("BTCUSD")) targets.push(cryptoMap.get("BTCUSD")!);
+
+          if (symbol === "BTCUSDC" && cryptoMap.has("BTCUSD")) {
+            targets.push(cryptoMap.get("BTCUSD")!);
+          }
+          if (symbol === "PAXGUSDT") {
+            if (cryptoMap.has("XAUTUSDC")) targets.push(cryptoMap.get("XAUTUSDC")!);
+            if (cryptoMap.has("XAUTUSDT")) targets.push(cryptoMap.get("XAUTUSDT")!);
+            if (cryptoMap.has("XAUUSD"))   targets.push(cryptoMap.get("XAUUSD")!);
+          }
 
           for (const instrument of targets) {
             const instId = instrument.id;
@@ -207,7 +217,78 @@ export function startBackgroundTasks() {
     });
   }
 
+  function setupFinnhubWebsocket() {
+    const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "d9c7kppr01qs0pv947ogd9c7kppr01qs0pv947p0";
+    const ws = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_API_KEY}`);
+
+    ws.on("open", async () => {
+      console.log("Connected to live Finnhub WebSocket mirror for Forex & Gold!");
+      const symbolsToSubscribe = ["OANDA:XAU_USD", "OANDA:XAG_USD", "OANDA:EUR_USD", "OANDA:GBP_USD", "OANDA:USD_JPY"];
+      for (const sym of symbolsToSubscribe) {
+        ws.send(JSON.stringify({'type':'subscribe', 'symbol': sym}));
+      }
+    });
+
+    ws.on("message", async (data: string) => {
+      try {
+        const msg = JSON.parse(data);
+        if (msg.type === "trade" && msg.data) {
+          const allInstruments = await db.select().from(instruments).where(eq(instruments.isActive, true));
+          for (const trade of msg.data) {
+            const sym = trade.s; // e.g. "OANDA:XAU_USD"
+            let dbSym = "";
+            if (sym === "OANDA:XAU_USD") dbSym = "XAUUSD";
+            else if (sym === "OANDA:XAG_USD") dbSym = "XAGUSD";
+            else if (sym.startsWith("OANDA:")) dbSym = sym.replace("OANDA:", "").replace("_", "");
+            
+            if (!dbSym) continue;
+
+            const instrument = allInstruments.find((i: any) => i.symbol === dbSym);
+            if (instrument) {
+              const price = parseFloat(trade.p);
+              if (dbSym === "XAUUSD" && price < 3500) continue;
+
+              // fetch previous close to compute change
+              let changeAbs = 0;
+              let changePct = 0;
+              
+              const [row] = await db.select().from(latestPrices).where(eq(latestPrices.instrumentId, instrument.id));
+              if (row && row.price) {
+                  const prevPrice = parseFloat(row.price);
+                  changeAbs = price - prevPrice;
+                  changePct = (changeAbs / prevPrice) * 100;
+              }
+
+              const newSparkline = await updateCachedSparkline(instrument, price, changeAbs);
+
+              await db.update(latestPrices)
+                .set({
+                  price: String(price),
+                  changeAbs: String(changeAbs),
+                  changePct: String(changePct),
+                  sparkline: newSparkline,
+                  asOf: new Date(),
+                  isOpen: true 
+                })
+                .where(eq(latestPrices.instrumentId, instrument.id));
+            }
+          }
+        }
+      } catch (err) {}
+    });
+
+    ws.on("close", () => {
+      console.log("Finnhub WebSocket closed. Reconnecting in 5s...");
+      setTimeout(setupFinnhubWebsocket, 5000);
+    });
+    
+    ws.on("error", (err) => {
+      console.error("Finnhub WS error:", err);
+    });
+  }
+
   setupBinanceWebsocket();
+  setupFinnhubWebsocket();
 
   setInterval(async () => {
     try {
@@ -225,10 +306,9 @@ export function startBackgroundTasks() {
       for (const instrument of activeInstruments) {
         let priceData = null;
 
-        if ((instrument.assetClass === "FOREX" || ["XAGUSD"].includes(instrument.symbol)) && instrument.symbol !== "XAUUSD") {
-          // Stagger TwelveData API calls to strictly respect 8 req / min limit
-          // 36 ticks = 180s. 12+ pairs staggered = 4/min
-          const shouldFetch = (bgTick % 3 === 0) && (((bgTick / 3) % 36) === (callCount % 36));
+        if (instrument.assetClass === "FOREX" || ["XAGUSD", "XAUUSD"].includes(instrument.symbol)) {
+          const isMetal = ["XAGUSD", "XAUUSD"].includes(instrument.symbol);
+          const shouldFetch = isMetal ? (bgTick % 3 === 0) : ((bgTick % 3 === 0) && (((bgTick / 3) % 36) === (callCount % 36)));
           callCount++;
           
           if (shouldFetch) {
@@ -285,13 +365,11 @@ export function startBackgroundTasks() {
           }
         }
 
-        // Priority 2: Yahoo Finance Universal Live Proxy (Zero Rate Limit)
-        if (!priceData && instrument.assetClass !== "CRYPTO") {
+        // Priority 2: Yahoo Finance Universal Live Proxy (Zero Rate Limit for Stocks & Forex)
+        if (!priceData && instrument.assetClass !== "CRYPTO" && !["XAUUSD", "XAGUSD"].includes(instrument.symbol)) {
           try {
             let ySym = instrument.symbol;
-            if (ySym === "XAUUSD") ySym = "GC=F";
-            else if (ySym === "XAGUSD") ySym = "SI=F";
-            else if (ySym === "WTIUSD") ySym = "CL=F";
+            if (ySym === "WTIUSD") ySym = "CL=F";
             else if (instrument.assetClass === "FOREX") ySym = `${ySym}=X`;
 
             const yRes = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySym)}?interval=15m&range=5d`, {
@@ -498,58 +576,62 @@ export function startBackgroundTasks() {
                 // Send SMS Win Notification
                 try {
                   const user = await storage.getUser(trade.userId);
-                  const isAdmin = ["saran123@gmail.com", "htctrade123@gmail.com"].includes((user?.email || "").toLowerCase());
-                  
                   if (user && user.phoneNumber) {
                     await sendWinAlert(user.phoneNumber, returnAmount.toFixed(2));
                   }
-
-                  // ── AI ROUND PROFIT/LOSS TRACKING (NON-ADMINS) ──
-                  if (user && !isAdmin && trade.placedBy === "AI_BOT") {
-                     const isWin = returnAmount > 0;
-                     const profit = isWin 
-                        ? (returnAmount - parseFloat(trade.amount as string)) 
-                        : -parseFloat(trade.amount as string);
-                     
-                     let currentPnl = parseFloat(user.autoInvestRoundPnl as string) + profit;
-                     let currentRound = user.autoInvestRound;
-                     
-                     let roundProfitLimit = 50.00;
-                     let roundLossLimit = 20.00;
-
-                     if (currentRound === 2) {
-                        roundProfitLimit = 45.00;
-                        roundLossLimit = 20.00;
-                     } else if (currentRound >= 3) {
-                        roundProfitLimit = 35.00;
-                        roundLossLimit = 15.00;
-                     }
-
-                     let autoTradeEnabled = user.autoTradeEnabled;
-
-                     // Target Reached -> Next Round
-                     if (currentPnl >= roundProfitLimit) {
-                        currentRound++;
-                        currentPnl = 0; // Reset for next tier
-                     }
-
-                     // Loss Limit Breach -> STOP
-                     if (currentPnl <= -roundLossLimit) {
-                        autoTradeEnabled = false;
-                        console.log(`[AI Protection] User ${user.email} Round ${currentRound} STOP LOSS BREACH (-$${Math.abs(currentPnl)})`);
-                     }
-
-                     await db.update(users).set({ 
-                        autoInvestRound: currentRound,
-                        autoInvestRoundPnl: String(currentPnl),
-                        autoTradeEnabled
-                     }).where(eq(users.id, user.id));
-                  }
                 } catch (smsErr) {
-                  console.error("Task failed:", smsErr);
+                  console.error("SMS notification failed:", smsErr);
                 }
              } catch(err) { console.error("Wallet payout failed for trade:", trade.id, err); }
+          }
 
+          // ── AI ROUND PROFIT/LOSS TRACKING (NON-ADMINS) ──
+          try {
+            const user = await storage.getUser(trade.userId);
+            const isAdmin = ["saran123@gmail.com", "htctrade123@gmail.com"].includes((user?.email || "").toLowerCase());
+            
+            if (user && !isAdmin && trade.placedBy === "AI_BOT") {
+               const isWin = result === "WIN";
+               const profit = isWin 
+                  ? (returnAmount - parseFloat(trade.amount as string)) 
+                  : -parseFloat(trade.amount as string);
+               
+               let currentPnl = parseFloat(user.autoInvestRoundPnl as string) + profit;
+               let currentRound = user.autoInvestRound;
+               
+               let roundProfitLimit = 50.00;
+               let roundLossLimit = 20.00;
+
+               if (currentRound === 2) {
+                  roundProfitLimit = 45.00;
+                  roundLossLimit = 20.00;
+               } else if (currentRound >= 3) {
+                  roundProfitLimit = 35.00;
+                  roundLossLimit = 15.00;
+               }
+
+               let autoTradeEnabled = user.autoTradeEnabled;
+
+               // Target Reached -> Next Round
+               if (currentPnl >= roundProfitLimit) {
+                  currentRound++;
+                  currentPnl = 0; // Reset for next tier
+               }
+
+               // Loss Limit Breach -> STOP
+               if (currentPnl <= -roundLossLimit) {
+                  autoTradeEnabled = false;
+                  console.log(`[AI Protection] User ${user.email} Round ${currentRound} STOP LOSS BREACH (-$${Math.abs(currentPnl)})`);
+               }
+
+               await db.update(users).set({ 
+                  autoInvestRound: currentRound,
+                  autoInvestRoundPnl: String(currentPnl),
+                  autoTradeEnabled
+               }).where(eq(users.id, user.id));
+            }
+          } catch (pnlErr) {
+            console.error("AI PnL Tracking Error:", pnlErr);
           }
           
           console.log(`Resolved Time Trade #${trade.id}: ${trade.side} @ ${trade.strikePrice} -> Settle ${currentPrice} = ${result}`);

@@ -732,6 +732,8 @@ export class DatabaseStorage implements IStorage {
       { symbol: "XRPUSDT",  exchange: "BINANCE", name: "Ripple",     assetClass: "CRYPTO" as any, currency: "USD", country: "GL", isActive: true, imageUrl: "https://assets.coincap.io/assets/icons/xrp@2x.png" },
       { symbol: "ADAUSDT",  exchange: "BINANCE", name: "Cardano",    assetClass: "CRYPTO" as any, currency: "USD", country: "GL", isActive: true, imageUrl: "https://assets.coincap.io/assets/icons/ada@2x.png" },
       { symbol: "DOGEUSDT", exchange: "BINANCE", name: "Dogecoin",   assetClass: "CRYPTO" as any, currency: "USD", country: "GL", isActive: true, imageUrl: "https://assets.coincap.io/assets/icons/doge@2x.png" },
+      { symbol: "XAUTUSDC", exchange: "BINANCE", name: "Tether Gold (USDC)", assetClass: "CRYPTO" as any, currency: "USD", country: "GL", isActive: true, imageUrl: "https://assets.coincap.io/assets/icons/xaut@2x.png" },
+      { symbol: "XAUTUSDT", exchange: "BINANCE", name: "Tether Gold (USDT)", assetClass: "CRYPTO" as any, currency: "USD", country: "GL", isActive: true, imageUrl: "https://assets.coincap.io/assets/icons/xaut@2x.png" },
       
       // COMMODITIES
       { symbol: "XAUUSD",   exchange: "FOREX",   name: "Gold (Spot)", assetClass: "FOREX" as any,  currency: "USD", country: "US", isActive: true, imageUrl: null },
@@ -764,6 +766,7 @@ export class DatabaseStorage implements IStorage {
         if (sym === "BTCUSD" || sym === "BTCUSDT") base = 69717.92;
         else if (sym === "ETHUSDT") base = 3755.20;
         else if (sym === "XAUUSD") base = 2424.85;
+        else if (sym === "XAUTUSDC" || sym === "XAUTUSDT") base = 3998.00;
         else if (sym === "USDINR") base = 83.50;
         else if (sym === "USDPKR") base = 278.40;
         else if (sym === "USDJPY") base = 152.00;

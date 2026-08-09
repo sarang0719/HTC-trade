@@ -56,6 +56,7 @@ interface LiveTradingChartProps {
   assetClass: string;   // "CRYPTO" | "FOREX" | "US_STOCK" etc
   timeframe:  string;   // "1m" | "5m" | "15m" | "30m" | "1H"
   onPriceUpdate?: (price: number, direction: "up" | "down" | null) => void;
+  onCandleUpdate?: (candles: CandleOHLC[]) => void;
   priceLevels?: PriceLevel[];  // Active trade entry lines
   activeIndicators?: string[]; // Array of selected indicators (SMA, EMA, RSI, MACD)
 }
@@ -158,14 +159,19 @@ const bucketTime = (secs: number, candleSecs: number): UTCTimestamp =>
 
 const fmtPrice = (v: number, sym: string): string => {
   if (!v) return "—";
-  const dec = sym === "USDJPY" || sym === "GBPJPY" || sym === "EURJPY" ? 3
-    : sym.endsWith("USDT") ? (v < 1 ? 6 : v < 10 ? 4 : 2) : 4;
+  const upper = (sym || "").toUpperCase();
+  const is2Dec = upper.includes("XAU") || upper.includes("GOLD") || upper.includes("XAG") || upper.includes("WTI") || upper.includes("BRENT") || ["SPY","QQQ","AAPL","TSLA","NVDA","MSFT","AMZN","GOOGL","META"].includes(upper);
+  const dec = is2Dec ? 2
+    : upper === "USDJPY" || upper === "GBPJPY" || upper === "EURJPY" ? 3
+    : upper.endsWith("USDT") || (upper.includes("USD") && v > 1000) ? 2
+    : upper.endsWith("USDT") ? (v < 1 ? 6 : v < 10 ? 4 : 2)
+    : 4;
   return v.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 };
 
 // ── Component ──────────────────────────────────────────────────────────────
 function LiveTradingChartComponent({
-  symbol, exchange, assetClass, timeframe, onPriceUpdate, priceLevels = [], activeIndicators = [],
+  symbol, exchange, assetClass, timeframe, onPriceUpdate, onCandleUpdate, priceLevels = [], activeIndicators = [],
 }: LiveTradingChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Track drawn price lines so we can remove old ones
@@ -211,6 +217,44 @@ function LiveTradingChartComponent({
   // ── Stable ref for onPriceUpdate so the effect never re-runs due to parent re-renders
   const onPriceUpdateRef = useRef(onPriceUpdate);
   useEffect(() => { onPriceUpdateRef.current = onPriceUpdate; }, [onPriceUpdate]);
+
+  const onCandleUpdateRef = useRef(onCandleUpdate);
+  useEffect(() => { onCandleUpdateRef.current = onCandleUpdate; }, [onCandleUpdate]);
+
+  const appendOrUpdateCandle = useCallback((c: CandleOHLC) => {
+    const sanitized: CandleOHLC = {
+      ...c,
+      high: Math.max(c.open, c.close, c.high),
+      low:  Math.min(c.open, c.close, c.low),
+    };
+    const hist = [...historyRef.current];
+    if (hist.length === 0) {
+      hist.push(sanitized);
+    } else {
+      const last = hist[hist.length - 1];
+      if (sanitized.time > last.time) {
+        hist.push(sanitized);
+        if (hist.length > 500) hist.shift();
+      } else if (sanitized.time === last.time) {
+        hist[hist.length - 1] = sanitized;
+      }
+    }
+    historyRef.current = hist;
+
+    // Calculate and update indicator data on the chart:
+    if (indRefs.current.sma) indRefs.current.sma.setData(calculateSMA(hist, 20));
+    if (indRefs.current.ema) indRefs.current.ema.setData(calculateEMA(hist, 55));
+    if (indRefs.current.rsi) indRefs.current.rsi.setData(calculateRSI(hist, 14));
+    if (indRefs.current.macdHist && indRefs.current.macdLine && indRefs.current.macdSig) {
+      const macd = calculateMACD(hist);
+      indRefs.current.macdHist.setData(macd.map(m => ({ time: m.time, value: m.hist, color: m.hist >= 0 ? "rgba(38,166,154,0.7)" : "rgba(239,83,80,0.7)" })));
+      indRefs.current.macdLine.setData(macd.map(m => ({ time: m.time, value: m.macd })));
+      indRefs.current.macdSig.setData(macd.map(m => ({ time: m.time, value: m.signal })));
+    }
+
+    // Notify parent page:
+    onCandleUpdateRef.current?.(hist);
+  }, []);
 
   const [nowMs, setNowMs] = useState<number>(Date.now());
 
@@ -271,13 +315,19 @@ function LiveTradingChartComponent({
   const updateCandleRef = useRef((price: number) => {
     if (!candleRef.current || price <= 0) return;
 
+    // Outlier filter: if tick price deviates > 8% from current candle open, ignore tick to prevent seed price wicks
+    if (liveCandle.current && liveCandle.current.open > 0) {
+      const dev = Math.abs(price - liveCandle.current.open) / liveCandle.current.open;
+      if (dev > 0.08) return;
+    }
+
     const nowSec     = Math.floor(Date.now() / 1000);
     const candleSecs = candleSecsRef.current || 60;
     const bucket     = bucketTime(nowSec, candleSecs);
     let candle       = liveCandle.current;
 
-    if (!candle || bucket > candle.time || (candle && Math.abs(price - candle.open) / candle.open > 0.0015 && candle.volume === 0)) {
-      const open = candle?.close && bucket > candle.time ? candle.close : price;
+    if (!candle || bucket > candle.time) {
+      const open = (candle && candle.close > 0 && bucket > candle.time) ? candle.close : price;
       candle = { time: bucket, open, high: Math.max(open, price), low: Math.min(open, price), close: price, volume: 1 };
       liveCandle.current = candle;
       try {
@@ -285,17 +335,20 @@ function LiveTradingChartComponent({
       } catch {}
     } else {
       candle.close = price;
-      candle.high  = Math.max(candle.high, price);
-      candle.low   = Math.min(candle.low,  price);
+      candle.high  = Math.max(candle.high, candle.open, price);
+      candle.low   = Math.min(candle.low,  candle.open, price);
       if (candle.volume !== undefined) candle.volume += 1;
     }
 
     try {
-      candleRef.current.update({ time: candle.time, open: candle.open, high: candle.high, low: candle.low, close: candle.close });
+      const priceLineColor = price >= (candle.open || price) ? "#00e676" : "#ff5252";
+      candleRef.current?.applyOptions({ priceLineColor });
+      candleRef.current?.update({ time: candle.time, open: candle.open, high: candle.high, low: candle.low, close: candle.close });
       liveLineRef.current?.update({ time: candle.time, value: price });
-    } catch { /* ignore */ }
+    } catch (err) { /* ignore */ }
 
     setOhlcInfo({ o: candle.open, h: candle.high, l: candle.low, c: price, v: candle.volume ?? 0 });
+    appendOrUpdateCandle(candle);
   });
 
   // ── Accept external price tick (called by WS / poller) ───────────────────
@@ -332,8 +385,9 @@ function LiveTradingChartComponent({
     let countdownTimer: ReturnType<typeof setInterval> | null = null;
     let wsDelay = 1000;
     candleSecsRef.current = TF_SECS[timeframe] ?? 60;
-    // Binance WS delivers real per-second OHLC for Cryptos and PAXGUSDT only
-    const isCrypto = !["XAUUSD", "XAGUSD", "WTIUSD", "BRENTUSD"].includes(symbol) && (exchange === "BINANCE" || symbol === "BTCUSD" || symbol === "BTCUSDT" || symbol === "PAXGUSDT" || symbol.endsWith("USDT"));
+    // Binance WS delivers real per-second OHLC for Cryptos (PAXGUSDT / BTCUSDT)
+    const isCrypto = (exchange === "BINANCE" || symbol === "BTCUSD" || symbol === "BTCUSDT" || symbol === "PAXGUSDT" || symbol.endsWith("USDT") || symbol.endsWith("USDC")) &&
+      !["XAUUSD", "XAGUSD", "WTIUSD", "BRENTUSD"].includes(symbol);
     renderedPriceRef.current = 0;
     lastRenderTsRef.current = 0;
 
@@ -371,7 +425,7 @@ function LiveTradingChartComponent({
       autoSize: true,
     });
 
-    // ── 2. Add Candlestick Series (Exact Quotex Neon Green & Red) ───────────
+    // ── 2. Add Candlestick Series (Exact Quotex Neon Green & Red) ────────
     const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor:         "#00e676", // Quotex pure bullish green
       downColor:       "#ff5252", // Quotex pure bearish red
@@ -459,14 +513,15 @@ function LiveTradingChartComponent({
       loadDone = true;
       clearTimeout(loadTimeout);
 
-      if (history.length === 0) {
-        const seedPrice = targetPriceRef.current || currentPriceRef.current;
-        if (seedPrice > 0) {
-           const now = Math.floor(Date.now() / 1000);
-           const cs  = candleSecsRef.current;
-           const aligned = Math.floor(now / cs) * cs;
-           history.push({ time: aligned as UTCTimestamp, open: seedPrice, high: seedPrice, low: seedPrice, close: seedPrice, volume: 0 });
-        }
+      if (history.length > 0) {
+        // Sanitize & validate OHLC bounds for 100% precision
+        history = history.map(c => {
+          const o = Number(c.open);
+          const cl = Number(c.close);
+          const h = Math.max(o, cl, Number(c.high));
+          const l = Math.min(o, cl, Number(c.low));
+          return { ...c, open: o, high: h, low: l, close: cl };
+        });
       }
 
       if (!isActive) return;
@@ -519,23 +574,13 @@ function LiveTradingChartComponent({
       const loop = () => {
         if (!isActive) return;
 
-        // Smoothly animate the rendered price and candle body toward the latest target price
-        // with realistic continuous Quotex micro-momentum oscillation (bid-ask spread jitter).
+        // Smoothly interpolate rendered price toward latest target price quote
         const target = targetPriceRef.current;
         if (target > 0) {
           const cur  = renderedPriceRef.current || target;
           const diff = target - cur;
           
-          let next: number;
-          if (Math.abs(diff) < target * 0.00003) {
-            // Realistic institutional order-flow micro-oscillation right at the current market price
-            const t = performance.now() * 0.0035;
-            const microOsc = Math.sin(t) * (target * 0.000035) + Math.cos(t * 1.8) * (target * 0.000018);
-            next = target + microOsc;
-          } else {
-            // Fluid 30% interpolation toward the new target price quote
-            next = cur + diff * 0.3;
-          }
+          const next = cur + diff * 0.25;
 
           renderedPriceRef.current = next;
           currentPriceRef.current  = next;
@@ -543,7 +588,11 @@ function LiveTradingChartComponent({
           const now = performance.now();
           if (now - lastRenderTsRef.current >= RENDER_MS) {
             lastRenderTsRef.current = now;
-            updateCandleRef.current(next);
+            // For WebSocket streaming assets (isCrypto), WebSocket onmessage is the sole authority for candle updates.
+            // Only run local candle bucket updates for non-WS REST polled assets to avoid dual-timestamp candle race conditions.
+            if (!isCrypto) {
+              updateCandleRef.current(next);
+            }
           }
         }
 
@@ -555,78 +604,81 @@ function LiveTradingChartComponent({
     const connectWS = () => {
       if (!isActive) return;
 
+      // Fail-safe REST poller for ALL assets (guarantees chart never goes blank if client WS is blocked)
+      const poll = async () => {
+        if (!isActive) return;
+        // Skip REST polling if live WebSocket feed is actively connected to prevent feed feedback conflict
+        if (ws && ws.readyState === WebSocket.OPEN) return;
+
+        try {
+          const r = await fetch(`/api/market-data/price/${symbol}`);
+          if (r.ok) {
+            const d = await r.json();
+            if (d.price && parseFloat(d.price) > 0) {
+              onTickRef.current(parseFloat(d.price));
+              setIsConnected(true);
+            }
+          }
+        } catch {}
+      };
+      poll();
+      if (!poller) poller = setInterval(poll, 1000);
+
       if (isCrypto) {
         let wsSymbol = symbol.toLowerCase();
         if (symbol === "BTCUSD") wsSymbol = "btcusdt";
-        if (symbol === "PAXGUSDT") wsSymbol = "paxgusdt";
+        else if (symbol === "PAXGUSDT") wsSymbol = "paxgusdt";
         const interval = TF_BIN[timeframe] ?? "1m";
-        // Connect to both live kline bar updates AND instant per-millisecond trade ticks
-        ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${wsSymbol}@kline_${interval}/${wsSymbol}@miniTicker`);
 
-        ws.onopen = () => { wsDelay = 1000; setIsConnected(true); };
-        ws.onmessage = (ev) => {
-          if (!isActive) return;
-          try {
-            const raw = JSON.parse(ev.data);
-            const data = raw.data || raw;
-            if (data.e === "24hrMiniTicker" && data.c) {
-              const close = parseFloat(data.c);
-              if (close > 0) onTickRef.current(close);
-            } else if (data.e === "kline" && data.k) {
-              const k = data.k;
-              const time = Math.floor(k.t / 1000) as UTCTimestamp;
-              const open = parseFloat(k.o);
-              const high = parseFloat(k.h);
-              const low  = parseFloat(k.l);
-              const close = parseFloat(k.c);
-              const volume = parseFloat(k.v || "0");
-              
-              if (candleRef.current && close > 0) {
-                try {
-                  candleRef.current.update({ time, open, high, low, close });
-                  liveLineRef.current?.update({ time, value: close });
-                } catch {}
-                liveCandle.current = { time, open, high, low, close, volume };
-                setOhlcInfo({ o: open, h: high, l: low, c: close, v: volume });
-              }
-              onTickRef.current(close);
-            }
-          } catch {}
-        };
-        ws.onclose = () => {
-          setIsConnected(false);
-          if (!isActive) return;
-          wsReco = setTimeout(() => {
-            wsDelay = Math.min(wsDelay * 2, 30000);
-            connectWS();
-          }, wsDelay);
-        };
-        ws.onerror = () => {
-          if (ws) ws.onclose = null;
-          setIsConnected(false);
-          if (!isActive) return;
-          wsReco = setTimeout(() => { wsDelay = Math.min(wsDelay * 2, 30000); connectWS(); }, wsDelay);
-        };
+        try {
+          const wsUrl = `wss://stream.binance.com:9443/stream?streams=${wsSymbol}@kline_${interval}/${wsSymbol}@miniTicker`;
+          ws = new WebSocket(wsUrl);
 
-      } else {
-        // For commodities (Gold/Silver/Oil), US Stocks, and Forex, poll institutional REST backend every 1000ms
-        // This eliminates public free tier WebSocket errors and leverages backend universal quotes
-        const poll = async () => {
-          if (!isActive) return;
-          try {
-            const r = await fetch(`/api/market-data/price/${symbol}`);
-            if (r.ok) {
-              const d = await r.json();
-              if (d.price && parseFloat(d.price) > 0) {
-                onTickRef.current(parseFloat(d.price));
-                setIsConnected(true);
+          ws.onopen = () => { wsDelay = 1000; setIsConnected(true); };
+          ws.onmessage = (ev) => {
+            if (!isActive) return;
+            try {
+              const raw = JSON.parse(ev.data);
+              const data = raw.data || raw;
+              if (data.e === "24hrMiniTicker" && data.c) {
+                const close = parseFloat(data.c);
+                if (close > 0) onTickRef.current(close);
+              } else if (data.e === "kline" && data.k) {
+                const k = data.k;
+                const time = Math.floor(k.t / 1000) as UTCTimestamp;
+                const open = parseFloat(k.o);
+                const close = parseFloat(k.c);
+                const high = Math.max(open, close, parseFloat(k.h));
+                const low  = Math.min(open, close, parseFloat(k.l));
+                const volume = parseFloat(k.v || "0");
+                
+                if (candleRef.current && close > 0) {
+                  if (symbol !== "BTCUSD") {
+                    try {
+                      candleRef.current.update({ time, open, high, low, close });
+                      liveLineRef.current?.update({ time, value: close });
+                    } catch {}
+                    const candle = { time, open, high, low, close, volume };
+                    liveCandle.current = candle;
+                    setOhlcInfo({ o: open, h: high, l: low, c: close, v: volume });
+                    appendOrUpdateCandle(candle);
+                  }
+                }
+                onTickRef.current(close);
               }
-            }
-          } catch {}
-        };
-        poll();
-        poller = setInterval(poll, 1000);
-        setIsConnected(true);
+            } catch {}
+          };
+          ws.onclose = () => {
+            if (!isActive) return;
+            wsReco = setTimeout(() => { wsDelay = Math.min(wsDelay * 2, 30000); connectWS(); }, wsDelay);
+          };
+          ws.onerror = () => {
+            if (ws) ws.onclose = null;
+            if (!isActive) return;
+          };
+        } catch (wsErr) {
+          console.warn("[Chart WS] Client WS disabled, using REST stream fallback:", wsErr);
+        }
       }
     };
 
@@ -643,15 +695,22 @@ function LiveTradingChartComponent({
       if (poller)        clearInterval(poller);
       if (countdownTimer) clearInterval(countdownTimer);
       if (ws) {
-        ws.onclose = null;
-        ws.onerror = null;
-        if (ws.readyState !== WebSocket.CLOSED) {
-          try { ws.close(); } catch {}
+        const socket = ws;
+        socket.onclose = null;
+        socket.onerror = null;
+        if (socket.readyState === WebSocket.CONNECTING) {
+          socket.onopen = () => {
+            try { socket.close(); } catch {}
+          };
+        } else if (socket.readyState === WebSocket.OPEN) {
+          try { socket.close(); } catch {}
         }
       }
       try { chart.remove(); } catch {}
       chartRef.current  = null;
       candleRef.current = null;
+      drawnLinesRef.current.clear();
+      indRefs.current = {};
       setChartReady(false);
     };
   }, [symbol, timeframe, assetClass, exchange]);

@@ -119,10 +119,33 @@ app.use((req, res, next) => {
     }
 
     // PHASE 3: Non-blocking Background Initialization
-    setTimeout(() => {
+    setTimeout(async () => {
        try {
          startBackgroundTasks();
          startAiBotEngine();
+
+         // Auto-start Python AI engine if available
+         try {
+           const { spawn } = await import("child_process");
+           const fs = await import("fs");
+           const path = await import("path");
+           const pythonPath = path.resolve(process.cwd(), "python-ai/venv/bin/python");
+           const scriptPath = path.resolve(process.cwd(), "python-ai/api.py");
+           if (fs.existsSync(pythonPath) && fs.existsSync(scriptPath)) {
+             // Check if python AI is responding
+             fetch("http://127.0.0.1:8000/docs").catch(() => {
+               const child = spawn(pythonPath, [scriptPath], {
+                 stdio: "ignore",
+                 detached: true
+               });
+               child.unref();
+               log("Python AI FastAPI service auto-started on port 8000.");
+             });
+           }
+         } catch (pyErr) {
+           console.error("[Python AI Launcher Error]", pyErr);
+         }
+
          log("Institutional background engines active.");
 
           // PHASE 4: Market Sync - Moved to background with delay

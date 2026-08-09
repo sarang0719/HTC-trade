@@ -37,7 +37,7 @@ export interface BacktestResult {
  * real calls, so including them would inflate or deflate the number
  * meaninglessly.
  */
-export function backtestPredictor(candles: Candle[], candleSeconds = 60): BacktestResult {
+export function backtestPredictor(candles: Candle[], candleSeconds = 60, customWeights?: any): BacktestResult {
   const byStrength: BacktestResult["byStrength"] = {
     STRONG: { wins: 0, losses: 0 },
     NORMAL: { wins: 0, losses: 0 },
@@ -51,7 +51,7 @@ export function backtestPredictor(candles: Candle[], candleSeconds = 60): Backte
 
   for (let i = MIN_HISTORY; i < candles.length - 1; i++) {
     const windowSoFar = candles.slice(0, i + 1); // only data up to and including candle i — no peeking ahead
-    const prediction = predictNextCandle(windowSoFar, candleSeconds);
+    const prediction = predictNextCandle(windowSoFar, candleSeconds, customWeights);
 
     if (!prediction.isConfirmed) continue; // only score real, confirmed calls
 

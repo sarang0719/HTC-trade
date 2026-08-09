@@ -6,5 +6,15 @@
     "strings": "on"
   },
   "css.customData": [],
-  "tailwindCSS.experimental.classRegex": []
+  "tailwindCSS.experimental.classRegex": [],
+  "python.defaultInterpreterPath": "./python-ai/venv/bin/python",
+  "python.pythonPath": "./python-ai/venv/bin/python",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/python-ai/venv/lib/python3.13/site-packages",
+    "${workspaceFolder}/python-ai"
+  ],
+  "pyright.analysis.extraPaths": [
+    "${workspaceFolder}/python-ai/venv/lib/python3.13/site-packages",
+    "${workspaceFolder}/python-ai"
+  ]
 }

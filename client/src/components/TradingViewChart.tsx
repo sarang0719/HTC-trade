@@ -3,7 +3,7 @@ import { useMemo } from "react";
 // ── Symbol mapping: internal → TradingView ────────────────────────────────
 const TV_SYMBOL: Record<string, string> = {
   // Crypto (Binance)
-  BTCUSD:   "BINANCE:BTCUSDT",
+  BTCUSD:   "BINANCE:BTCUSDPERP",
   BTCUSDT:  "BINANCE:BTCUSDT",
   ETHUSDT:  "BINANCE:ETHUSDT",
   BNBUSDT:  "BINANCE:BNBUSDT",
