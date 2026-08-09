@@ -239,29 +239,26 @@ export default function MarketDetail() {
   const [tradeDuration, setTradeDuration] = useState(60); // default: 1m candle
   const [livePrice, setLivePrice] = useState<number | null>(null);
 
-  // ── Synchronized Price Engine (Continuous 2.5s Live Price Poll + LiveTradingChart Sync) ──
+  // ── Synchronized Price Engine (Direct LiveTradingChart Sync) ──
   useEffect(() => {
     if (!instrument) return;
     let isActive = true;
 
-    const fetchLivePrice = async () => {
+    // Initial fetch to seed header price before chart loads
+    const seedPrice = async () => {
       try {
         const sym = instrument?.symbol || "BTCUSD";
         const res = await fetch(`/api/market-data/price/${sym}`);
         if (res.ok) {
           const d = await res.json();
-          if (d.price && isActive) setLivePrice(parseFloat(d.price));
+          if (d.price && isActive && livePrice === null) setLivePrice(parseFloat(d.price));
         }
       } catch {}
     };
-    fetchLivePrice();
-    const timer = setInterval(fetchLivePrice, 1000);
+    seedPrice();
 
-    return () => { 
-      isActive = false; 
-      clearInterval(timer);
-    };
-  }, [instrument?.symbol, instrument?.exchange]);
+    return () => { isActive = false; };
+  }, [instrument?.symbol]);
 
   // Custom Candle Detail Hover states
   const [hoverTimeStr, setHoverTimeStr] = useState<string | null>(null);
