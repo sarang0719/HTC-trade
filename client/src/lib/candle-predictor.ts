@@ -49,6 +49,8 @@ export interface CandlePrediction {
   entryPrice?: number;
   targetPrice?: number;
   stopLossPrice?: number;
+  isHighVolatility?: boolean;
+  volatilityRatio?: number;
 }
 
 export interface PredictionFactor {
@@ -254,7 +256,7 @@ export function predictNextCandle(
   const ema8 = ema(closes, emaMidLen);
   const ema21 = ema(closes, emaSlowLen);
   const rsi14 = rsiArr(closes, is1mTimeframe ? 5 : 14);
-  const atr14 = atrArr(src, 14);
+  const atr7 = atrArr(src, 7);
   const stDir = supertrendArr(src, 2.0, 10);
   const macdLine = ema(closes, 12).map((v, i) => v - ema(closes, 26)[i]);
   const macdSig = ema(macdLine, 9);
@@ -262,12 +264,12 @@ export function predictNextCandle(
 
   const rsiV = rsi14[n];
   const prevRsi = rsi14[Math.max(0, n - 1)];
-  const atrV = atr14[n] || 1;
+  const atrV = atr7[n] || 1;
 
   const isGold = marketSymbol?.toUpperCase().includes("XAU") ?? false;
 
   // ── SMC Structural Zones ──────────────────────────────────────────────────
-  const { bull: obBull, bear: obBear } = detectOB(src, atr14, isGold);
+  const { bull: obBull, bear: obBear } = detectOB(src, atr7, isGold);
   const { bull: fvgBull, bear: fvgBear } = detectFVG(src);
   const { bos, choch } = detectStructure(src);
 
@@ -358,8 +360,14 @@ export function predictNextCandle(
   const direction: "BUY" | "SELL" = isPerfectBull ? "BUY" : isPerfectBear ? "SELL" : (bullW > bearW ? "BUY" : (bearW > bullW ? "SELL" : (c.close >= src[Math.max(0, n - 1)].close ? "BUY" : "SELL")));
   const isConfirmed = isPerfectBull || isPerfectBear || (Math.max(bullW, bearW) >= 10);
 
-  // High Confluence Action Filter
-  const action = isConfirmed ? direction : "MONITORING";
+  // ── Real-Time Market Volatility Detector ────────────────────────────────────
+  const recentRanges = src.slice(Math.max(0, n - 14), n + 1).map(x => x.high - x.low);
+  const avgATR = recentRanges.reduce((a, b) => a + b, 0) / Math.max(1, recentRanges.length);
+  const volatilityRatio = avgATR > 0 ? (c.high - c.low) / avgATR : 1.0;
+  const isHighVolatility = volatilityRatio >= 1.85 || rangeC > atrV * 2.2;
+
+  // High Confluence Action Filter (Overridden to MONITORING if High Volatility Spike)
+  const action = isHighVolatility ? "MONITORING" : (isConfirmed ? direction : "MONITORING");
 
   // Dynamic High-Precision Probability & Win Rate Calculation
   const dominantW = Math.max(bullW, bearW);
@@ -420,7 +428,7 @@ export function predictNextCandle(
   const tpMult = is3to1Pair ? 3.0 : 1.5;
   const slMult = 1.0;
 
-  const atrVal = atr14[n] || Math.max(0.0001, c.high - c.low);
+  const atrVal = atr7[n] || Math.max(0.0001, c.high - c.low);
   const isBuySignal = direction === "BUY";
   const entryPrice = Number(c.close.toFixed(2));
   const targetPrice = Number((isBuySignal ? c.close + (atrVal * tpMult) : c.close - (atrVal * tpMult)).toFixed(2));
@@ -444,6 +452,8 @@ export function predictNextCandle(
     backtestWinRate: isConfirmed ? probability : Math.max(78, Math.round(probability * 0.9)),
     entryPrice,
     targetPrice,
-    stopLossPrice
+    stopLossPrice,
+    isHighVolatility,
+    volatilityRatio: Math.round(volatilityRatio * 10) / 10
   };
 }

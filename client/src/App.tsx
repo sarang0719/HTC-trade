@@ -51,6 +51,14 @@ function Router() {
         <Route path="/app/watchlists/:id" component={WatchlistDetail} />
         <Route path="/app/markets" component={Markets} />
         <Route path="/app/markets/:id" component={MarketDetail} />
+
+        {/* Direct Route Aliases (Fixes 404 when navigating directly) */}
+        <Route path="/markets" component={Markets} />
+        <Route path="/markets/:id" component={MarketDetail} />
+        <Route path="/market/:id" component={MarketDetail} />
+        <Route path="/trade/:id" component={MarketDetail} />
+        <Route path="/portfolio" component={PortfolioPage} />
+        <Route path="/dashboard" component={AppIndex} />
         <Route path="/app/orders" component={Orders} />
         <Route path="/app/orders/new" component={NewOrder} />
         <Route path="/app/learn" component={Learn} />

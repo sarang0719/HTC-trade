@@ -29,13 +29,21 @@ def fetch_historical_data(symbol: str, timeframe: str = '5m', limit: int = 5000)
     print(f"Fetching {limit} historical candles for {formatted_symbol} ({timeframe})...")
     
     all_ohlcv = []
+    tf_clean = timeframe.lower()
+    if tf_clean == "1h":
+        timeframe = "1h"
+    elif tf_clean == "4h":
+        timeframe = "4h"
+
     # Calculate starting timestamp for past candles
     tf_ms = 60 * 1000
-    if timeframe == "1m": tf_ms = 1 * 60 * 1000
-    elif timeframe == "5m": tf_ms = 5 * 60 * 1000
-    elif timeframe == "15m": tf_ms = 15 * 60 * 1000
-    elif timeframe == "30m": tf_ms = 30 * 60 * 1000
-    elif timeframe == "1H": tf_ms = 60 * 60 * 1000
+    if tf_clean in ["1m"]: tf_ms = 1 * 60 * 1000
+    elif tf_clean in ["5m"]: tf_ms = 5 * 60 * 1000
+    elif tf_clean in ["15m"]: tf_ms = 15 * 60 * 1000
+    elif tf_clean in ["30m"]: tf_ms = 30 * 60 * 1000
+    elif tf_clean in ["1h", "60m"]: tf_ms = 60 * 60 * 1000
+    elif tf_clean in ["4h", "240m"]: tf_ms = 4 * 60 * 60 * 1000
+    elif tf_clean in ["1d"]: tf_ms = 24 * 60 * 60 * 1000
     
     since = int(time.time() * 1000) - (limit * tf_ms)
     batch_size = 1000

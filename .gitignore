@@ -5,6 +5,12 @@ server/public
 vite.config.ts.*
 *.tar.gz
 
+# Python cache & virtualenv
+__pycache__/
+*.pyc
+venv/
+python-ai/venv/
+
 # Secrets — never commit these. If they were ever committed before, rotate
 # every key below immediately and scrub git history (git filter-repo / BFG).
 .env

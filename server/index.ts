@@ -136,7 +136,8 @@ app.use((req, res, next) => {
              fetch("http://127.0.0.1:8000/docs").catch(() => {
                const child = spawn(pythonPath, [scriptPath], {
                  stdio: "ignore",
-                 detached: true
+                 detached: true,
+                 env: { ...process.env, PORT: "8000", PYTHON_PORT: "8000" }
                });
                child.unref();
                log("Python AI FastAPI service auto-started on port 8000.");

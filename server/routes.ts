@@ -508,7 +508,7 @@ export async function registerRoutes(
   });
 
   // Proxy AI Next Candle Prediction request to Python FastAPI Service
-  app.post("/api/ai/predict", isAuthenticated, async (req: any, res) => {
+  app.post("/api/ai/predict", async (req: any, res) => {
     try {
       const { market, timeframe, candles } = req.body;
       if (!market || !candles || candles.length === 0) {
@@ -857,39 +857,13 @@ export async function registerRoutes(
     const BINANCE_API_KEY = process.env.BINANCE_API_KEY || "4ZxKHsnocjAIQAVfcdfy1yh5Yf5AlfryUWa7cYmAlwbsSmAHwgNHnjIJHhBJGATW";
     const BINANCE_SECRET_KEY = process.env.BINANCE_SECRET_KEY || "ets2hS7FJ9fDbGyAn3YrqO7Qrc4eqwWiFzjGVnMZzrrNdWgm3oGh7Au3GtBPIZ0Z";
 
-    // Coinbase Spot Feed for BTCUSD (matches TradingView BTCUSD Spot Index 1:1)
-    if (symbol === "BTCUSD") {
-      try {
-        const cbRes = await fetch("https://api.coinbase.com/v2/prices/BTC-USD/spot");
-        if (cbRes.ok) {
-          const cbData = await cbRes.json() as any;
-          if (cbData?.data?.amount && parseFloat(cbData.data.amount) > 0) {
-            const currentPrice = parseFloat(cbData.data.amount);
-            storage.getInstrumentBySymbol("BTCUSD").then(async (inst) => {
-              if (inst && (inst as any).id) {
-                await storage.updateLatestPrice((inst as any).id, String(currentPrice), "0.01", "0.01");
-              }
-            }).catch(() => {});
-
-            return res.json({
-              symbol: "BTCUSD",
-              price: currentPrice,
-              changeAbs: 0.01,
-              changePct: 0.01,
-              asOf: new Date().toISOString(),
-              source: "Coinbase Spot BTC-USD (TradingView Index)"
-            });
-          }
-        }
-      } catch (err) {}
-    }
-
-    // Live Binance Quote check first for Crypto and PAXGUSDT
-    if (symbol.endsWith("USDT") || symbol.endsWith("USDC") || symbol === "PAXGUSDT" || symbol === "XAUTUSDC" || symbol === "XAUTUSDT") {
+    // Live Binance Quote check first for Crypto and Gold (BTCUSD / XAUUSD / PAXGUSDT)
+    if (symbol.endsWith("USDT") || symbol.endsWith("USDC") || symbol === "BTCUSD" || symbol === "XAUUSD" || symbol === "PAXGUSDT" || symbol === "XAUTUSDC" || symbol === "XAUTUSDT") {
       try {
         const headers: Record<string, string> = { "X-MBX-APIKEY": BINANCE_API_KEY };
         let binSym = symbol;
-        if (symbol === "XAUTUSDC" || symbol === "XAUTUSDT") binSym = "XAUTUSDT";
+        if (symbol === "BTCUSD") binSym = "BTCUSDT";
+        else if (symbol === "XAUUSD" || symbol === "XAUTUSDC" || symbol === "XAUTUSDT") binSym = "PAXGUSDT";
 
         const binRes = await fetch(`https://api3.binance.com/api/v3/ticker/24hr?symbol=${binSym}`, { headers });
         if (binRes.ok) {
@@ -1155,36 +1129,7 @@ export async function registerRoutes(
       const isMetals = ["XAUUSD", "XAGUSD", "PAXGUSDT"].includes(symbol);
       const isForex  = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCHF", "GBPJPY", "USDCAD", "USDPKR", "USDINR", "CADCHF", "WTIUSD"].includes(symbol) || (symbol.length === 6 && !isCrypto && !isMetals);
 
-      // ── Priority Tier 0: Coinbase Spot for BTCUSD (matches TradingView BTCUSD Index 1:1) ─
-      if (symbol === "BTCUSD") {
-        try {
-          const granMap: Record<string, number> = {
-            "1m": 60, "2m": 60, "3m": 300, "5m": 300, "15m": 900, "30m": 900,
-            "1H": 3600, "4H": 21600, "1D": 86400, "1W": 86400, "1M": 86400
-          };
-          const gran = granMap[interval] || 900;
-          const cbRes = await fetch(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=${gran}`);
-          if (cbRes.ok) {
-            const cbData = await cbRes.json() as any[];
-            if (Array.isArray(cbData) && cbData.length > 0) {
-              const sorted = [...cbData].reverse();
-              results = sorted.map(c => ({
-                time: c[0],
-                low: c[1],
-                high: c[2],
-                open: c[3],
-                close: c[4],
-                volume: c[5]
-              }));
-              return res.json({ symbol: "BTCUSD", results, source: "Coinbase BTC-USD Spot API (TradingView Index)" });
-            }
-          }
-        } catch (cbErr) {
-          console.warn("[Coinbase Candle] Error for BTCUSD:", cbErr);
-        }
-      }
-
-      // ── Priority Tier 1: Binance API for Crypto & Gold (PAXGUSDT / XAUUSD) ─
+      // ── Priority Tier 1: Binance API for Crypto & Gold (BTCUSD / PAXGUSDT / XAUUSD) ─
       if (isCrypto || symbol === "PAXGUSDT" || symbol === "XAUUSD" || symbol === "XAUTUSDT") {
         try {
           source = "Binance API";
@@ -1195,7 +1140,9 @@ export async function registerRoutes(
           const bInt = binIntervalMap[interval] || "1m";
           const headers: Record<string, string> = { "X-MBX-APIKEY": BINANCE_API_KEY };
           let binSymbol = symbol;
-          if (symbol === "XAUUSD" || symbol === "XAUTUSDC" || symbol === "XAUTUSDT") binSymbol = "XAUTUSDT";
+          if (symbol === "BTCUSD" || symbol === "BTCUSDT") binSymbol = "BTCUSDT";
+          else if (symbol === "XAUUSD" || symbol === "XAUTUSDC" || symbol === "XAUTUSDT" || symbol === "PAXGUSDT") binSymbol = "PAXGUSDT";
+          else if (symbol === "ETHUSD" || symbol === "ETHUSDT") binSymbol = "ETHUSDT";
 
           const bRes = await fetch(`https://api3.binance.com/api/v3/klines?symbol=${binSymbol}&interval=${bInt}&limit=500`, { headers });
           if (bRes.ok) {

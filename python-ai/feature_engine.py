@@ -26,7 +26,7 @@ def generate_features(df: pd.DataFrame) -> pd.DataFrame:
         df['MACD_Signal'] = macd.iloc[:, 2]
         df['MACD_Hist'] = macd.iloc[:, 1]
     
-    df['ATR'] = ta.atr(df['high'], df['low'], df['close'], length=14)
+    df['ATR'] = ta.atr(df['high'], df['low'], df['close'], length=7)
     
     adx = ta.adx(df['high'], df['low'], df['close'])
     if adx is not None and not adx.empty:
@@ -35,13 +35,14 @@ def generate_features(df: pd.DataFrame) -> pd.DataFrame:
     df['CCI'] = ta.cci(df['high'], df['low'], df['close'], length=14)
     df['MOM'] = ta.mom(df['close'], length=10)
     
-    # -- VWAP (Requires volume)
-    # pandas-ta vwap requires high, low, close, volume, timestamp as index
-    temp_df = df.set_index('timestamp')
+    # -- VWAP (Volume Weighted Average Price)
     try:
-        df['VWAP'] = ta.vwap(temp_df['high'], temp_df['low'], temp_df['close'], temp_df['volume']).values
+        typ_price = (df['high'] + df['low'] + df['close']) / 3.0
+        cum_vol = df['volume'].cumsum()
+        cum_vol_price = (typ_price * df['volume']).cumsum()
+        df['VWAP'] = np.where(cum_vol > 0, cum_vol_price / cum_vol, df['close'])
     except Exception:
-        df['VWAP'] = df['close'] # fallback
+        df['VWAP'] = df['close']
         
     # -- Bollinger Bands
     bbands = ta.bbands(df['close'], length=20)

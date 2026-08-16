@@ -24,14 +24,15 @@ def train_model(df: pd.DataFrame, target_col: str, model_name: str) -> Tuple[His
     y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
     
     model = HistGradientBoostingClassifier(
-        max_iter=350,
-        learning_rate=0.03,
-        max_depth=7,
-        min_samples_leaf=15,
-        l2_regularization=0.1,
+        max_iter=1000,
+        learning_rate=0.015,
+        max_depth=12,
+        min_samples_leaf=10,
+        l2_regularization=0.6,
+        class_weight='balanced',
         random_state=42,
         early_stopping=True,
-        n_iter_no_change=25
+        n_iter_no_change=45
     )
     
     model.fit(X_train, y_train)
@@ -53,6 +54,11 @@ def load_model(model_name: str) -> Tuple[Optional[HistGradientBoostingClassifier
         return None, None
 
 def predict(model: HistGradientBoostingClassifier, features_list: list, df_row: pd.DataFrame) -> Dict[str, Any]:
+    df_row = df_row.copy()
+    for col in features_list:
+        if col not in df_row.columns:
+            df_row[col] = 0.0
+            
     X = df_row[features_list]
     
     probs = model.predict_proba(X)[0]

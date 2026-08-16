@@ -143,15 +143,15 @@ function calculateMACD(data: CandleOHLC[], fast = 12, slow = 26, signal = 9) {
 // ── Helpers ────────────────────────────────────────────────────────────────
 const TF_SECS: Record<string, number> = {
   "1m": 60, "2m": 120, "3m": 180, "5m": 300, "15m": 900,
-  "30m": 1800, "1H": 3600, "4H": 14400, "1D": 86400,
+  "30m": 1800, "1H": 3600, "1h": 3600, "4H": 14400, "4h": 14400, "1D": 86400, "1d": 86400,
 };
 const TF_BIN: Record<string, string> = {
   "1m": "1m", "2m": "1m", "3m": "3m", "5m": "5m",
-  "15m": "15m", "30m": "30m", "1H": "1h", "4H": "4h", "1D": "1d",
+  "15m": "15m", "30m": "30m", "1H": "1h", "1h": "1h", "4H": "4h", "4h": "4h", "1D": "1d", "1d": "1d",
 };
 const TF_TWELVE: Record<string, string> = {
   "1m": "1min", "2m": "1min", "3m": "5min", "5m": "5min",
-  "15m": "15min", "30m": "30min", "1H": "1h", "4H": "4h", "1D": "1day",
+  "15m": "15min", "30m": "30min", "1H": "1h", "1h": "1h", "4H": "4h", "4h": "4h", "1D": "1day", "1d": "1day",
 };
 
 const bucketTime = (secs: number, candleSecs: number): UTCTimestamp =>
@@ -385,9 +385,9 @@ function LiveTradingChartComponent({
     let countdownTimer: ReturnType<typeof setInterval> | null = null;
     let wsDelay = 1000;
     candleSecsRef.current = TF_SECS[timeframe] ?? 60;
-    // Binance WS delivers real per-second OHLC for Cryptos (PAXGUSDT / BTCUSDT)
-    const isCrypto = (exchange === "BINANCE" || symbol === "BTCUSD" || symbol === "BTCUSDT" || symbol === "PAXGUSDT" || symbol.endsWith("USDT") || symbol.endsWith("USDC")) &&
-      !["XAUUSD", "XAGUSD", "WTIUSD", "BRENTUSD"].includes(symbol);
+    // Binance WS delivers real per-second OHLC for Cryptos & Gold (PAXGUSDT / XAUUSD / BTCUSD)
+    const isCrypto = (exchange === "BINANCE" || symbol === "BTCUSD" || symbol === "BTCUSDT" || symbol === "XAUUSD" || symbol === "PAXGUSDT" || symbol.endsWith("USDT") || symbol.endsWith("USDC")) &&
+      !["XAGUSD", "WTIUSD", "BRENTUSD"].includes(symbol);
     renderedPriceRef.current = 0;
     lastRenderTsRef.current = 0;
 
@@ -627,7 +627,7 @@ function LiveTradingChartComponent({
       if (isCrypto) {
         let wsSymbol = symbol.toLowerCase();
         if (symbol === "BTCUSD") wsSymbol = "btcusdt";
-        else if (symbol === "PAXGUSDT") wsSymbol = "paxgusdt";
+        else if (symbol === "XAUUSD" || symbol === "XAUTUSDT" || symbol === "PAXGUSDT") wsSymbol = "paxgusdt";
         const interval = TF_BIN[timeframe] ?? "1m";
 
         try {
@@ -653,16 +653,14 @@ function LiveTradingChartComponent({
                 const volume = parseFloat(k.v || "0");
                 
                 if (candleRef.current && close > 0) {
-                  if (symbol !== "BTCUSD") {
-                    try {
-                      candleRef.current.update({ time, open, high, low, close });
-                      liveLineRef.current?.update({ time, value: close });
-                    } catch {}
-                    const candle = { time, open, high, low, close, volume };
-                    liveCandle.current = candle;
-                    setOhlcInfo({ o: open, h: high, l: low, c: close, v: volume });
-                    appendOrUpdateCandle(candle);
-                  }
+                  try {
+                    candleRef.current.update({ time, open, high, low, close });
+                    liveLineRef.current?.update({ time, value: close });
+                  } catch {}
+                  const candle = { time, open, high, low, close, volume };
+                  liveCandle.current = candle;
+                  setOhlcInfo({ o: open, h: high, l: low, c: close, v: volume });
+                  appendOrUpdateCandle(candle);
                 }
                 onTickRef.current(close);
               }
