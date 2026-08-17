@@ -442,9 +442,30 @@ export default function MarketDetail() {
     };
   }, [prediction, hasHighImpactNews, candlesRef.current?.length]);
 
+  const [lastMtfScan, setLastMtfScan] = useState<number>(Date.now());
+  const [mtfCountdown, setMtfCountdown] = useState<number>(1);
+
+  // Dynamic Auto-Refresh MTF Scanner based on active timeframe
+  useEffect(() => {
+    const refreshMs = timeframe === "1m" ? 1000 : timeframe === "5m" ? 3000 : timeframe === "15m" ? 5000 : 10000;
+    setMtfCountdown(Math.ceil(refreshMs / 1000));
+
+    const interval = setInterval(() => {
+      setMtfCountdown((prev) => {
+        if (prev <= 1) {
+          setLastMtfScan(Date.now());
+          return Math.ceil(refreshMs / 1000);
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timeframe]);
+
   const mtfConfluence = useMemo(() => {
     return scanMultiTimeframeConfluence(candlesRef.current || [], instrument?.symbol || "BTCUSD");
-  }, [candlesRef.current?.length, instrument?.symbol]);
+  }, [candlesRef.current?.length, instrument?.symbol, lastMtfScan]);
 
   const handleTrainAI = () => {
     const history = candlesRef.current || [];
@@ -1594,16 +1615,21 @@ export default function MarketDetail() {
                         <BrainCircuit className="w-3.5 h-3.5 text-sky-400" />
                         <span className="text-[9px] font-black text-sky-300 uppercase tracking-wider">MULTI-TIMEFRAME CONFIRMATION</span>
                       </div>
-                      <span className={cn(
-                        "text-[9px] font-black px-1.5 py-0.5 rounded uppercase border font-mono",
-                        mtfConfluence.badgeColor === "emerald"
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                          : mtfConfluence.badgeColor === "amber"
-                            ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                            : "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                      )}>
-                        {mtfConfluence.alignedCount}/4 ALIGNED
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[8px] font-mono font-bold bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded border border-sky-500/30 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" /> Auto-Sync ({mtfCountdown}s)
+                        </span>
+                        <span className={cn(
+                          "text-[9px] font-black px-1.5 py-0.5 rounded uppercase border font-mono",
+                          mtfConfluence.badgeColor === "emerald"
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                            : mtfConfluence.badgeColor === "amber"
+                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                              : "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                        )}>
+                          {mtfConfluence.alignedCount}/4 ALIGNED
+                        </span>
+                      </div>
                     </div>
 
                     {/* 4 Timeframe Badges */}
