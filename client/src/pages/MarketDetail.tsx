@@ -26,7 +26,7 @@ import OrderTicketDialog from "@/components/OrderTicketDialog";
 import { useInstruments } from "@/hooks/use-instruments";
 import { useTimeTrades } from "@/hooks/use-time-trades";
 import { calculatePnL } from "@/lib/pnl";
-import type { CandlePrediction } from "@/lib/candle-predictor";
+import { CandlePrediction, scanMultiTimeframeConfluence } from "@/lib/candle-predictor";
 import { useAiCredits } from "@/hooks/useAiCredits";
 import { AiPaymentModal } from "@/components/AiPaymentModal";
 import { useAuth } from "@/hooks/use-auth";
@@ -441,6 +441,10 @@ export default function MarketDetail() {
       label: hasHighImpactNews ? `🔴 HIGH (NEWS SPIKE)` : `🟢 NORMAL (1.0x ATR)`
     };
   }, [prediction, hasHighImpactNews, candlesRef.current?.length]);
+
+  const mtfConfluence = useMemo(() => {
+    return scanMultiTimeframeConfluence(candlesRef.current || [], instrument?.symbol || "BTCUSD");
+  }, [candlesRef.current?.length, instrument?.symbol]);
 
   const handleTrainAI = () => {
     const history = candlesRef.current || [];
@@ -1580,6 +1584,66 @@ export default function MarketDetail() {
                       <span className="text-[10px] font-black font-mono text-white flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Upcoming {timeframe} Candle
                       </span>
+                    </div>
+                  </div>
+
+                  {/* Multi-Timeframe Confirmation Matrix Card */}
+                  <div className="bg-slate-900/90 border border-slate-700/60 p-2.5 rounded-xl space-y-2 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <BrainCircuit className="w-3.5 h-3.5 text-sky-400" />
+                        <span className="text-[9px] font-black text-sky-300 uppercase tracking-wider">MULTI-TIMEFRAME CONFIRMATION</span>
+                      </div>
+                      <span className={cn(
+                        "text-[9px] font-black px-1.5 py-0.5 rounded uppercase border font-mono",
+                        mtfConfluence.badgeColor === "emerald"
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                          : mtfConfluence.badgeColor === "amber"
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                            : "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                      )}>
+                        {mtfConfluence.alignedCount}/4 ALIGNED
+                      </span>
+                    </div>
+
+                    {/* 4 Timeframe Badges */}
+                    <div className="grid grid-cols-4 gap-1">
+                      {["1m", "5m", "15m", "1H"].map((tf) => {
+                        const sig = mtfConfluence.tfSignals[tf] || "MONITORING";
+                        const isActiveTF = timeframe === tf;
+                        return (
+                          <div
+                            key={tf}
+                            onClick={() => setTimeframe(tf)}
+                            className={cn(
+                              "p-1.5 rounded-lg border text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5",
+                              isActiveTF ? "ring-1 ring-sky-400 font-bold scale-[1.02]" : "opacity-85 hover:opacity-100",
+                              sig === "BUY"
+                                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                                : sig === "SELL"
+                                  ? "bg-rose-500/15 border-rose-500/40 text-rose-300"
+                                  : "bg-white/5 border-white/10 text-muted-foreground"
+                            )}
+                          >
+                            <span className="text-[8px] font-black uppercase text-muted-foreground">{tf}</span>
+                            <span className="text-[9px] font-black font-mono">
+                              {sig === "BUY" ? "🟢 BUY" : sig === "SELL" ? "🔻 SELL" : "⚪ WAIT"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Confluence Badge Result */}
+                    <div className={cn(
+                      "text-[9.5px] font-black font-mono p-1.5 rounded-lg border text-center shadow-inner uppercase tracking-tight",
+                      mtfConfluence.badgeColor === "emerald"
+                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                        : mtfConfluence.badgeColor === "amber"
+                          ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                          : "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                    )}>
+                      {mtfConfluence.badgeText}
                     </div>
                   </div>
 
