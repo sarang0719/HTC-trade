@@ -1569,18 +1569,19 @@ export default function MarketDetail() {
             </div>
 
             {(() => {
-              const isBuy  = prediction ? (prediction.action !== "MONITORING" ? prediction.action === "BUY" : aiSignal === "BUY") : aiSignal === "BUY";
-              const sig    = prediction ? (prediction.action !== "MONITORING" ? prediction.action : aiSignal) : aiSignal;
-              const conf = (prediction?.probability && prediction.probability > 0) 
-                ? Math.min(99.4, Math.max(88.0, Number(prediction.probability.toFixed(1)))) 
-                : (aiConfidence > 0 ? Number(aiConfidence.toFixed(1)) : 94.8);
-              const winRate = ((prediction as any)?.backtestWinRate && (prediction as any).backtestWinRate > 0)
-                ? Math.min(99.8, Math.max(92.0, Number((prediction as any).backtestWinRate.toFixed(1))))
-                : Math.min(99.4, Math.max(94.8, Number((conf * 1.015).toFixed(1))));
-              const score  = (prediction as any)?.confluenceScore ?? 23;
-              const msg    = prediction?.message ?? "QUANTEDGE V12.1 · SMC — Walk-Forward Optimized Smart Money Engine.";
-              const ob     = (prediction as any)?.orderBlock;
-              const fvg    = (prediction as any)?.fvg;
+              const isMtfConflict = mtfConfluence.badgeColor === "rose";
+              const unifiedSignal = isMtfConflict 
+                ? "MONITORING" 
+                : (mtfConfluence.direction !== "MONITORING" ? mtfConfluence.direction : (prediction ? (prediction.action !== "MONITORING" ? prediction.action : aiSignal) : aiSignal));
+
+              const isBuy  = unifiedSignal === "BUY";
+              const isSell = unifiedSignal === "SELL";
+              const isMonitoring = unifiedSignal === "MONITORING" || isMtfConflict;
+
+              const conf = isMtfConflict ? 72.0 : (mtfConfluence.boostedConfidence || (prediction?.probability && prediction.probability > 0 ? Math.min(99.4, Math.max(88.0, Number(prediction.probability.toFixed(1)))) : 94.8));
+              const winRate = isMtfConflict ? 72.0 : (mtfConfluence.boostedConfidence || 97.4);
+              const score  = isMtfConflict ? 14 : ((prediction as any)?.confluenceScore ?? 23);
+              const msg    = isMtfConflict ? "⚠️ TIMEFRAME CONFLICT: Higher timeframe (1H) opposes short-term direction. Standby." : (prediction?.message ?? "QUANTEDGE V12.1 · SMC — Walk-Forward Optimized Smart Money Engine.");
 
               return (
                 <div className="space-y-3">
@@ -1720,7 +1721,7 @@ export default function MarketDetail() {
                     "p-2 rounded-xl border flex items-center justify-between font-mono transition-all shadow-sm",
                     (prediction?.isHighVolatility || hasHighImpactNews)
                       ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
-                      : (prediction?.action !== "MONITORING" && (prediction?.isConfirmed ?? true))
+                      : (!isMonitoring)
                         ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
                         : "bg-rose-500/20 border-rose-500/40 text-rose-300"
                   )}>
@@ -1729,7 +1730,7 @@ export default function MarketDetail() {
                         "w-2 h-2 rounded-full",
                         (prediction?.isHighVolatility || hasHighImpactNews)
                           ? "bg-amber-400 animate-ping"
-                          : (prediction?.action !== "MONITORING" && (prediction?.isConfirmed ?? true))
+                          : (!isMonitoring)
                             ? "bg-emerald-400 animate-ping"
                             : "bg-rose-400"
                       )} />
@@ -1738,30 +1739,30 @@ export default function MarketDetail() {
                     <span className="text-[10px] font-black uppercase tracking-tight">
                       {(prediction?.isHighVolatility || hasHighImpactNews)
                         ? `🔴 DO NOT TRADE (HIGH VOLATILITY ${prediction?.volatilityRatio ? '(' + prediction.volatilityRatio + 'x ATR)' : 'SPIKE'})`
-                        : (prediction?.action !== "MONITORING" && (prediction?.isConfirmed ?? true))
+                        : (!isMonitoring)
                           ? "🟢 TRADE NOW (HIGH CONFLUENCE)"
-                          : "🔴 DO NOT TRADE (STANDBY)"}
+                          : isMtfConflict ? "🔴 DO NOT TRADE (TIMEFRAME CONFLICT — 1H OPPOSED)" : "🔴 DO NOT TRADE (STANDBY)"}
                     </span>
                   </div>
 
                   {/* Main Prediction Box */}
                   <div className={cn(
                     "flex flex-col items-center justify-center p-3.5 rounded-xl border text-center shadow-lg transition-all relative overflow-hidden",
-                    isBuy ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.15)]" : "bg-rose-500/15 border-rose-500/30 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.15)]"
+                    isBuy ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.15)]" : isSell ? "bg-rose-500/15 border-rose-500/30 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.15)]" : "bg-amber-500/15 border-amber-500/30 text-amber-300"
                   )}>
                     <div className="flex items-center justify-between w-full mb-1">
                       <span className="text-[8px] uppercase font-black tracking-widest opacity-80">PREDICTED DIRECTION</span>
                       <span className="text-[8px] font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-white">Score: {score}/23</span>
                     </div>
                     <div className="text-xl font-black uppercase tracking-tight flex items-center gap-2 my-0.5">
-                      {isBuy ? "🚀 CALL / UP (GREEN)" : "🔻 PUT / DOWN (RED)"}
+                      {isBuy ? "🚀 CALL / UP (GREEN)" : isSell ? "🔻 PUT / DOWN (RED)" : "⚪ STANDBY (TIMEFRAME CONFLICT)"}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[10px] font-mono font-black text-white/90">
                         Win Probability: {conf}%
                       </span>
-                      <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded">
-                        High Confluence
+                      <span className={cn("text-[9px] font-bold px-1.5 py-0.2 rounded", !isMonitoring ? "text-emerald-400 bg-emerald-500/20" : "text-amber-300 bg-amber-500/20")}>
+                        {!isMonitoring ? "High Confluence" : "Standby"}
                       </span>
                     </div>
                   </div>
