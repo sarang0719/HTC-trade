@@ -635,7 +635,7 @@ function LiveTradingChartComponent({
       if (isCrypto) {
         let wsSymbol = symbol.toLowerCase();
         if (symbol === "BTCUSD") wsSymbol = "btcusdt";
-        else if (symbol === "XAUUSD" || symbol === "XAUTUSDT" || symbol === "PAXGUSDT") wsSymbol = "paxgusdt";
+        else if (symbol === "XAUUSD" || symbol === "XAUTUSDT" || symbol === "PAXGUSDT") wsSymbol = "xautusdt";
         const interval = TF_BIN[timeframe] ?? "1m";
 
         try {

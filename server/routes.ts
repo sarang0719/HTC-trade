@@ -863,7 +863,7 @@ export async function registerRoutes(
         const headers: Record<string, string> = { "X-MBX-APIKEY": BINANCE_API_KEY };
         let binSym = symbol;
         if (symbol === "BTCUSD") binSym = "BTCUSDT";
-        else if (symbol === "XAUUSD" || symbol === "XAUTUSDC" || symbol === "XAUTUSDT") binSym = "PAXGUSDT";
+        else if (symbol === "XAUUSD" || symbol === "XAUTUSDC" || symbol === "XAUTUSDT" || symbol === "PAXGUSDT") binSym = "XAUTUSDT";
 
         const binRes = await fetch(`https://api3.binance.com/api/v3/ticker/24hr?symbol=${binSym}`, { headers });
         if (binRes.ok) {
@@ -1141,7 +1141,7 @@ export async function registerRoutes(
           const headers: Record<string, string> = { "X-MBX-APIKEY": BINANCE_API_KEY };
           let binSymbol = symbol;
           if (symbol === "BTCUSD" || symbol === "BTCUSDT") binSymbol = "BTCUSDT";
-          else if (symbol === "XAUUSD" || symbol === "XAUTUSDC" || symbol === "XAUTUSDT" || symbol === "PAXGUSDT") binSymbol = "PAXGUSDT";
+          else if (symbol === "XAUUSD" || symbol === "XAUTUSDC" || symbol === "XAUTUSDT" || symbol === "PAXGUSDT") binSymbol = "XAUTUSDT";
           else if (symbol === "ETHUSD" || symbol === "ETHUSDT") binSymbol = "ETHUSDT";
 
           const bRes = await fetch(`https://api3.binance.com/api/v3/klines?symbol=${binSymbol}&interval=${bInt}&limit=500`, { headers });
