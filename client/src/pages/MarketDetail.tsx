@@ -668,10 +668,13 @@ export default function MarketDetail() {
           const lastC = closedHistory[closedHistory.length - 1];
           const lastClose = lastC?.close || 0;
           const isBuy = aiData.signal === "BUY";
+          const atrVal = parseFloat(liveVolatility.atrValue) || (lastClose * 0.0005);
           const is3to1 = (instrument?.symbol?.toUpperCase().includes("XAU") || instrument?.symbol?.toUpperCase().includes("BTC")) && candleSecs >= 900;
-          const tpMult = is3to1 ? 0.0050 : 0.0025;
-          const tpPrice = Number((isBuy ? lastClose * (1 + tpMult) : lastClose * (1 - tpMult)).toFixed(2));
-          const slPrice = Number((isBuy ? lastClose * 0.9985 : lastClose * 1.0015).toFixed(2));
+          const tpMult = is3to1 ? 3.0 : 1.5;
+          const slMult = 1.0;
+
+          const tpPrice = Number((isBuy ? lastClose + (atrVal * tpMult) : lastClose - (atrVal * tpMult)).toFixed(2));
+          const slPrice = Number((isBuy ? lastClose - (atrVal * slMult) : lastClose + (atrVal * slMult)).toFixed(2));
 
           pred = {
             direction: aiData.signal === "NO TRADE" ? "MONITORING" : aiData.signal,
@@ -1676,7 +1679,9 @@ export default function MarketDetail() {
                   {/* Target & Stop Loss Levels */}
                   {(() => {
                     const is3to1 = (instrument?.symbol?.toUpperCase().includes("XAU") || instrument?.symbol?.toUpperCase().includes("BTC")) && (timeframe === "15m" || timeframe === "30m" || timeframe === "1H" || timeframe === "4H");
-                    const tpMult = is3to1 ? 0.0050 : 0.0025;
+                    const atrNum = parseFloat(liveVolatility.atrValue) || (displayPrice * 0.0005);
+                    const tpMult = is3to1 ? 3.0 : 1.5;
+                    const slMult = 1.0;
                     return (
                       <div className="grid grid-cols-3 gap-1.5">
                         <div className="bg-sky-500/10 border border-sky-500/20 p-2 rounded-xl text-center">
@@ -1691,13 +1696,13 @@ export default function MarketDetail() {
                           )}
                           <span className="text-[7.5px] font-bold text-emerald-400 uppercase block tracking-wider">🎯 Target (TP)</span>
                           <span className="text-[11px] font-black font-mono text-emerald-300">
-                            {prediction?.targetPrice ? `$${prediction.targetPrice}` : displayPrice > 0 ? `$${Number((isBuy ? displayPrice * (1 + tpMult) : displayPrice * (1 - tpMult)).toFixed(2))}` : "..."}
+                            {prediction?.targetPrice ? `$${prediction.targetPrice}` : displayPrice > 0 ? `$${Number((isBuy ? displayPrice + (atrNum * tpMult) : displayPrice - (atrNum * tpMult)).toFixed(2))}` : "..."}
                           </span>
                         </div>
                         <div className="bg-rose-500/10 border border-rose-500/20 p-2 rounded-xl text-center">
                           <span className="text-[7.5px] font-bold text-rose-400 uppercase block tracking-wider">🛡️ Stop Loss (SL)</span>
                           <span className="text-[11px] font-black font-mono text-rose-300">
-                            {prediction?.stopLossPrice ? `$${prediction.stopLossPrice}` : displayPrice > 0 ? `$${Number((isBuy ? displayPrice * 0.9985 : displayPrice * 1.0015).toFixed(2))}` : "..."}
+                            {prediction?.stopLossPrice ? `$${prediction.stopLossPrice}` : displayPrice > 0 ? `$${Number((isBuy ? displayPrice - (atrNum * slMult) : displayPrice + (atrNum * slMult)).toFixed(2))}` : "..."}
                           </span>
                         </div>
                       </div>
