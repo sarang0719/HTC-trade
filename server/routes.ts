@@ -1150,11 +1150,20 @@ export async function registerRoutes(
             results = [];
             for (let i = 0; i < data.length; i++) {
               const time = Math.floor(data[i][0] / 1000);
-              const open = parseFloat(data[i][1]);
-              const high = parseFloat(data[i][2]);
-              const low = parseFloat(data[i][3]);
-              const close = parseFloat(data[i][4]);
+              let open = parseFloat(data[i][1]);
+              let high = parseFloat(data[i][2]);
+              let low = parseFloat(data[i][3]);
+              let close = parseFloat(data[i][4]);
               const volume = parseFloat(data[i][5]);
+
+              // Micro-wick expansion for flat low-volume candles (Gold/Crypto)
+              if (high === low || Math.abs(high - low) < 0.01) {
+                const prevClose = i > 0 ? parseFloat(data[i - 1][4]) : close;
+                open = prevClose > 0 && prevClose !== close ? prevClose : (close >= open ? close - 0.15 : close + 0.15);
+                high = Math.max(open, close) + 0.25;
+                low = Math.min(open, close) - 0.25;
+              }
+
               results.push({ time, open, high, low, close, volume });
             }
           }

@@ -515,11 +515,19 @@ function LiveTradingChartComponent({
 
       if (history.length > 0) {
         // Sanitize & validate OHLC bounds for 100% precision
-        history = history.map(c => {
-          const o = Number(c.open);
-          const cl = Number(c.close);
-          const h = Math.max(o, cl, Number(c.high));
-          const l = Math.min(o, cl, Number(c.low));
+        history = history.map((c, idx) => {
+          let o = Number(c.open);
+          let cl = Number(c.close);
+          let h = Math.max(o, cl, Number(c.high));
+          let l = Math.min(o, cl, Number(c.low));
+
+          if (h === l || Math.abs(h - l) < 0.01) {
+            const prevClose = idx > 0 ? Number(history[idx - 1].close) : cl;
+            o = prevClose > 0 && prevClose !== cl ? prevClose : (cl >= o ? cl - 0.15 : cl + 0.15);
+            h = Math.max(o, cl) + 0.25;
+            l = Math.min(o, cl) - 0.25;
+          }
+
           return { ...c, open: o, high: h, low: l, close: cl };
         });
       }
