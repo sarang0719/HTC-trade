@@ -488,21 +488,35 @@ export function scanMultiTimeframeConfluence(
     };
   }
 
+  // Detect actual candle interval in seconds from input candles
+  let candleIntervalSecs = 60;
+  if (allCandles.length >= 2) {
+    const diff = allCandles[allCandles.length - 1].time - allCandles[allCandles.length - 2].time;
+    if (diff > 0 && diff <= 86400) {
+      candleIntervalSecs = diff;
+    }
+  }
+
   // Anchor higher timeframes to fully closed historical buckets for 100% steady flicker-free signals
   const closedCandles = allCandles.length > 5 ? allCandles.slice(0, -1) : allCandles;
 
-  const c5m = aggregateCandles(closedCandles, 300);
-  const c15m = aggregateCandles(closedCandles, 900);
-  const c1h = aggregateCandles(closedCandles, 3600);
+  // Scale aggregation seconds relative to detected candle interval
+  const agg5m = Math.max(candleIntervalSecs, 300);
+  const agg15m = Math.max(candleIntervalSecs, 900);
+  const agg1h = Math.max(candleIntervalSecs, 3600);
+
+  const c5m = aggregateCandles(closedCandles, agg5m);
+  const c15m = aggregateCandles(closedCandles, agg15m);
+  const c1h = aggregateCandles(closedCandles, agg1h);
 
   const c5mFull = c5m.length > 5 ? c5m.slice(0, -1) : c5m;
   const c15mFull = c15m.length > 5 ? c15m.slice(0, -1) : c15m;
   const c1hFull = c1h.length > 3 ? c1h.slice(0, -1) : c1h;
 
-  const pred1m = predictNextCandle(allCandles, 60, undefined, marketSymbol);
-  const pred5m = predictNextCandle(c5mFull.length >= 5 ? c5mFull : c5m, 300, undefined, marketSymbol);
-  const pred15m = predictNextCandle(c15mFull.length >= 5 ? c15mFull : c15m, 900, undefined, marketSymbol);
-  const pred1h = predictNextCandle(c1hFull.length >= 3 ? c1hFull : c1h, 3600, undefined, marketSymbol);
+  const pred1m = predictNextCandle(allCandles, candleIntervalSecs, undefined, marketSymbol);
+  const pred5m = predictNextCandle(c5mFull.length >= 5 ? c5mFull : c5m, agg5m, undefined, marketSymbol);
+  const pred15m = predictNextCandle(c15mFull.length >= 5 ? c15mFull : c15m, agg15m, undefined, marketSymbol);
+  const pred1h = predictNextCandle(c1hFull.length >= 3 ? c1hFull : c1h, agg1h, undefined, marketSymbol);
 
   const getDir = (d: any): "BUY" | "SELL" | "MONITORING" => (d === "BUY" ? "BUY" : d === "SELL" ? "SELL" : "MONITORING");
 
