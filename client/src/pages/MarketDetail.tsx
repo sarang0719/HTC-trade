@@ -442,6 +442,27 @@ export default function MarketDetail() {
     };
   }, [prediction, hasHighImpactNews, candlesRef.current?.length]);
 
+  const [base1mCandles, setBase1mCandles] = useState<any[]>([]);
+
+  // Dedicated background fetch of 1m base candles for rock-solid global Multi-Timeframe Confirmation
+  useEffect(() => {
+    if (!instrument?.symbol) return;
+    const fetchBase1m = () => {
+      fetch(`/api/market-data/history/${instrument.symbol}?interval=1m`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.results && data.results.length >= 30) {
+            setBase1mCandles(data.results);
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchBase1m();
+    const interval = setInterval(fetchBase1m, 3000);
+    return () => clearInterval(interval);
+  }, [instrument?.symbol]);
+
   const [lastMtfScan, setLastMtfScan] = useState<number>(Date.now());
   const [mtfCountdown, setMtfCountdown] = useState<number>(1);
 
@@ -464,8 +485,9 @@ export default function MarketDetail() {
   }, [timeframe]);
 
   const mtfConfluence = useMemo(() => {
-    return scanMultiTimeframeConfluence(candlesRef.current || [], instrument?.symbol || "BTCUSD");
-  }, [candlesRef.current?.length, instrument?.symbol, lastMtfScan]);
+    const baseCandles = base1mCandles.length >= 30 ? base1mCandles : (candlesRef.current || []);
+    return scanMultiTimeframeConfluence(baseCandles, instrument?.symbol || "BTCUSD");
+  }, [base1mCandles.length, candlesRef.current?.length, instrument?.symbol, lastMtfScan]);
 
   const handleTrainAI = () => {
     const history = candlesRef.current || [];

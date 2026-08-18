@@ -63,17 +63,17 @@ export interface PredictionFactor {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const W = {
-  SMC_OB_FVG: 4,
-  EXHAUSTION: 4,
-  BOS_CHOCH: 3,
-  EMA_STACK: 3,
+  SMC_OB_FVG: 5,
+  EXHAUSTION: 5,
+  BOS_CHOCH: 4,
+  EMA_STACK: 4,
   VOLUMETRIC: 3,
-  RSI_ACCEL: 2,
+  RSI_ACCEL: 3,
   ST_CHANNEL: 2,
   MACD_FLOW: 2
 };
-const MAX_W = W.SMC_OB_FVG + W.EXHAUSTION + W.BOS_CHOCH + W.EMA_STACK + W.VOLUMETRIC + W.RSI_ACCEL + W.ST_CHANNEL + W.MACD_FLOW; // 23
-const MIN_SCORE = 11;
+const MAX_W = W.SMC_OB_FVG + W.EXHAUSTION + W.BOS_CHOCH + W.EMA_STACK + W.VOLUMETRIC + W.RSI_ACCEL + W.ST_CHANNEL + W.MACD_FLOW; // 28
+const MIN_SCORE = 14;
 const WARMUP = 50;
 // NOTE: there is intentionally no hardcoded "win rate" constant here anymore.
 // Any accuracy figure shown to users must come from backtest.ts, run against
@@ -229,13 +229,13 @@ export function predictNextCandle(
   const isGoldMarket = marketSymbol?.toUpperCase().includes("XAU") ?? false;
 
   const GOLD_TRAINED_W = {
-    SMC_OB_FVG: 4,
+    SMC_OB_FVG: 5,
     EXHAUSTION: 6,
     BOS_CHOCH: 4,
-    EMA_STACK: 3,
-    VOLUMETRIC: 4,
-    RSI_ACCEL: 4,
-    ST_CHANNEL: 1,
+    EMA_STACK: 4,
+    VOLUMETRIC: 3,
+    RSI_ACCEL: 3,
+    ST_CHANNEL: 2,
     MACD_FLOW: 1
   };
 
