@@ -73,7 +73,7 @@ const W = {
   MACD_FLOW: 2
 };
 const MAX_W = W.SMC_OB_FVG + W.EXHAUSTION + W.BOS_CHOCH + W.EMA_STACK + W.VOLUMETRIC + W.RSI_ACCEL + W.ST_CHANNEL + W.MACD_FLOW; // 28
-const MIN_SCORE = 14;
+const MIN_SCORE = 20;
 const WARMUP = 50;
 // NOTE: there is intentionally no hardcoded "win rate" constant here anymore.
 // Any accuracy figure shown to users must come from backtest.ts, run against
@@ -362,7 +362,7 @@ export function predictNextCandle(
   const isPerfectBear = inBearZone && (rsiV >= rsiOverbought || (upperWick / rangeC > requiredWickRatio)) && isExtremeBearishExhaustion;
 
   const direction: "BUY" | "SELL" = isPerfectBull ? "BUY" : isPerfectBear ? "SELL" : (bullW > bearW ? "BUY" : (bearW > bullW ? "SELL" : (c.close >= src[Math.max(0, n - 1)].close ? "BUY" : "SELL")));
-  const isConfirmed = isPerfectBull || isPerfectBear || (Math.max(bullW, bearW) >= 10);
+  const isConfirmed = isPerfectBull || isPerfectBear || (Math.max(bullW, bearW) >= MIN_SCORE);
 
   // ── Real-Time Market Volatility Detector ────────────────────────────────────
   const recentRanges = src.slice(Math.max(0, n - 14), n + 1).map(x => x.high - x.low);
