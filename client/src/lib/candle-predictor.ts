@@ -116,9 +116,13 @@ function atrArr(candles: Candle[], len: number): number[] {
   );
   const out = new Array(candles.length).fill(0);
   if (tr.length < len) return out;
-  out[len - 1] = tr.slice(0, len).reduce((a, b) => a + b, 0) / len;
-  for (let i = len; i < candles.length; i++)
-    out[i] = (out[i - 1] * (len - 1) + tr[i]) / len;
+  
+  // High-precision EMA smoothing for hyper-responsive ATR volatility
+  const k = 2 / (len + 1);
+  out[0] = tr[0];
+  for (let i = 1; i < candles.length; i++) {
+    out[i] = tr[i] * k + out[i - 1] * (1 - k);
+  }
   return out;
 }
 
@@ -484,24 +488,41 @@ export function scanMultiTimeframeConfluence(
     };
   }
 
-  // Anchor higher timeframes to closed historical buckets for 100% steady flicker-free signals
+  // Anchor higher timeframes to fully closed historical buckets for 100% steady flicker-free signals
   const closedCandles = allCandles.length > 5 ? allCandles.slice(0, -1) : allCandles;
 
-  const pred1m = predictNextCandle(allCandles, 60, undefined, marketSymbol);
   const c5m = aggregateCandles(closedCandles, 300);
-  const pred5m = predictNextCandle(c5m.length >= 8 ? c5m : allCandles, 300, undefined, marketSymbol);
   const c15m = aggregateCandles(closedCandles, 900);
-  const pred15m = predictNextCandle(c15m.length >= 8 ? c15m : allCandles, 900, undefined, marketSymbol);
   const c1h = aggregateCandles(closedCandles, 3600);
-  const pred1h = predictNextCandle(c1h.length >= 4 ? c1h : allCandles, 3600, undefined, marketSymbol);
 
-  const getDir = (d: any) => (d === "BUY" ? "BUY" : d === "SELL" ? "SELL" : "MONITORING");
+  const c5mFull = c5m.length > 5 ? c5m.slice(0, -1) : c5m;
+  const c15mFull = c15m.length > 5 ? c15m.slice(0, -1) : c15m;
+  const c1hFull = c1h.length > 3 ? c1h.slice(0, -1) : c1h;
+
+  const pred1m = predictNextCandle(allCandles, 60, undefined, marketSymbol);
+  const pred5m = predictNextCandle(c5mFull.length >= 5 ? c5mFull : c5m, 300, undefined, marketSymbol);
+  const pred15m = predictNextCandle(c15mFull.length >= 5 ? c15mFull : c15m, 900, undefined, marketSymbol);
+  const pred1h = predictNextCandle(c1hFull.length >= 3 ? c1hFull : c1h, 3600, undefined, marketSymbol);
+
+  const getDir = (d: any): "BUY" | "SELL" | "MONITORING" => (d === "BUY" ? "BUY" : d === "SELL" ? "SELL" : "MONITORING");
+
+  let dir1m: "BUY" | "SELL" | "MONITORING" = getDir(pred1m.direction);
+  let dir5m: "BUY" | "SELL" | "MONITORING" = getDir(pred5m.direction);
+  let dir15m: "BUY" | "SELL" | "MONITORING" = getDir(pred15m.direction);
+  let dir1h: "BUY" | "SELL" | "MONITORING" = getDir(pred1h.direction);
+
+  // Macro Alignment Hysteresis: If 1H + 15m + 1m are all BUY/SELL, align 5m to macro direction (filters $0.50 pullback noise)
+  if (dir1h === "BUY" && dir15m === "BUY" && dir1m === "BUY" && dir5m === "SELL") {
+    dir5m = "BUY";
+  } else if (dir1h === "SELL" && dir15m === "SELL" && dir1m === "SELL" && dir5m === "BUY") {
+    dir5m = "SELL";
+  }
 
   const sigs: { [key: string]: "BUY" | "SELL" | "MONITORING" } = {
-    "1m": getDir(pred1m.direction),
-    "5m": getDir(pred5m.direction),
-    "15m": getDir(pred15m.direction),
-    "1H": getDir(pred1h.direction)
+    "1m": dir1m,
+    "5m": dir5m,
+    "15m": dir15m,
+    "1H": dir1h
   };
 
   // Weighted Macro Bias: 1H = 4.0, 15m = 3.0, 5m = 2.0, 1m = 1.0 (Total = 10.0)
