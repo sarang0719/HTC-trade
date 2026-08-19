@@ -442,6 +442,58 @@ export default function MarketDetail() {
     };
   }, [prediction, hasHighImpactNews, candlesRef.current?.length]);
 
+  // --- Real-Time Sudden Fall Alert & Audio Warning Engine ---
+  const [suddenFallAlert, setSuddenFallAlert] = useState<{ active: boolean; message: string; dropAmt: number } | null>(null);
+  const lastAlertTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!candlesRef.current || candlesRef.current.length < 5) return;
+    const candles = candlesRef.current;
+    const n = candles.length - 1;
+    const currC = candles[n];
+    const prevC = candles[n - 1];
+    if (!currC || !prevC) return;
+
+    const dropAmt = prevC.close - currC.close;
+    const isGold = instrument?.symbol?.toUpperCase().includes("XAU");
+    const isBtc = instrument?.symbol?.toUpperCase().includes("BTC");
+    const threshold = isGold ? 1.20 : isBtc ? 150 : (currC.open * 0.0025);
+
+    const isSuddenDrop = dropAmt >= threshold && (currC.close < currC.open);
+
+    if (isSuddenDrop && Date.now() - lastAlertTimeRef.current > 15000) {
+      lastAlertTimeRef.current = Date.now();
+      const msg = `🚨 SUDDEN ${instrument?.symbol} FALL DETECTED (-$${dropAmt.toFixed(2)}) — STANDBY`;
+      setSuddenFallAlert({ active: true, message: msg, dropAmt });
+
+      toast({
+        title: "🚨 SUDDEN MARKET FALL ALERT",
+        description: `Sudden price drop detected (-$${dropAmt.toFixed(2)}). Banks collecting liquidity. Standby & do not enter CALL trades.`,
+        variant: "destructive"
+      });
+
+      // Play Alert Warning Chime Sound
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(260, audioCtx.currentTime + 0.45);
+        gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.45);
+      } catch {}
+
+      setTimeout(() => {
+        setSuddenFallAlert(null);
+      }, 12000);
+    }
+  }, [displayPrice, candlesRef.current?.length, instrument?.symbol]);
+
   const [base1mCandles, setBase1mCandles] = useState<any[]>([]);
 
   // Dedicated background fetch of 1m base candles for rock-solid global Multi-Timeframe Confirmation
@@ -1717,6 +1769,19 @@ export default function MarketDetail() {
                       {liveVolatility.label}
                     </div>
                   </div>
+
+                  {/* Real-Time Sudden Fall Warning Alert Banner (Dynamic) */}
+                  {suddenFallAlert?.active && (
+                    <div className="bg-rose-500/25 border-2 border-rose-500 text-rose-200 p-2.5 rounded-xl flex items-center justify-between shadow-lg animate-pulse">
+                      <div className="flex items-center gap-1.5 font-mono text-[9px] font-black uppercase">
+                        <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+                        <span>🚨 SUDDEN FALL DETECTED (-${suddenFallAlert.dropAmt.toFixed(2)})</span>
+                      </div>
+                      <span className="text-[8px] font-black font-mono bg-rose-600 text-white px-2 py-0.5 rounded uppercase">
+                        STANDBY
+                      </span>
+                    </div>
+                  )}
 
                   {/* High-Impact Economic News Warning Event Button (Dynamic) */}
                   {hasHighImpactNews && (
