@@ -1709,12 +1709,13 @@ export default function MarketDetail() {
             </div>
 
             {(() => {
-              const hasDirectionMismatch = Boolean(
+              const isShortTermTF = timeframe === "1m" || timeframe === "5m";
+              const hasDirectionMismatch = isShortTermTF && Boolean(
                 mtfConfluence.direction !== "MONITORING" &&
                 prediction?.direction &&
                 mtfConfluence.direction !== prediction.direction
               );
-              const isMtfConflict = mtfConfluence.badgeColor === "rose" || hasDirectionMismatch;
+              const isMtfConflict = isShortTermTF && (mtfConfluence.badgeColor === "rose" || hasDirectionMismatch);
               const unifiedSignal = isMtfConflict 
                 ? "MONITORING"
                 : (prediction?.action === "MONITORING" ? "MONITORING" : prediction?.direction ?? "MONITORING");
