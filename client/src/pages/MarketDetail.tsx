@@ -559,7 +559,7 @@ export default function MarketDetail() {
     return scanMultiTimeframeConfluence(baseCandles, instrument?.symbol || "BTCUSD");
   }, [base1mCandles.length, candlesRef.current?.length, instrument?.symbol, lastMtfScan]);
 
-  // --- Real-Time Money Sound Confluence Match Alert Engine ---
+  // --- Real-Time Money & Signal Sound Confluence Match Alert Engine ---
   const lastMoneySoundTimeRef = useRef<number>(0);
 
   useEffect(() => {
@@ -569,38 +569,74 @@ export default function MarketDetail() {
     if (isMatch && Date.now() - lastMoneySoundTimeRef.current > 20000) {
       lastMoneySoundTimeRef.current = Date.now();
 
+      const isSellSignal = prediction.direction === "SELL";
+
       toast({
-        title: `💰 PERFECT CONFLUENCE MATCH! (${prediction.direction})`,
-        description: `Both Main Prediction & Multi-Timeframe Card match 100% in ${prediction.direction} direction! High-confluence setup active.`,
+        title: isSellSignal 
+          ? `🔻 CONFIRMED SELL SIGNAL! (SELL SOUND ALERT)`
+          : `💰 CONFIRMED BUY SIGNAL! (BUY MONEY SOUND)`,
+        description: isSellSignal
+          ? `All timeframes confirmed in SELL direction! Execute PUT trade now.`
+          : `Both Main Prediction & Multi-Timeframe Card match 100% in BUY direction! High-confluence setup active.`,
+        variant: isSellSignal ? "destructive" : "default"
       });
 
-      // Play High-Pitch "Cha-Ching / Money Sound" (Dual Bell Harmonic Chime)
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        
-        // Note 1: Bright High Bell (987Hz - B5)
-        const osc1 = audioCtx.createOscillator();
-        const gain1 = audioCtx.createGain();
-        osc1.type = "sine";
-        osc1.frequency.setValueAtTime(987.77, audioCtx.currentTime);
-        gain1.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-        osc1.connect(gain1);
-        gain1.connect(audioCtx.destination);
-        osc1.start();
-        osc1.stop(audioCtx.currentTime + 0.5);
 
-        // Note 2: Cash Register High Octave Chime (1318.5Hz - E6 delayed 0.08s)
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
-        osc2.type = "triangle";
-        osc2.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.08);
-        gain2.gain.setValueAtTime(0.5, audioCtx.currentTime + 0.08);
-        gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.65);
-        osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
-        osc2.start(audioCtx.currentTime + 0.08);
-        osc2.stop(audioCtx.currentTime + 0.65);
+        if (isSellSignal) {
+          // --- Distinct SELL CONFIRMED Audio Chime (Descending Punchy Synth Drop) ---
+          // Note 1: High Punch Warning (784Hz G5 -> 392Hz G4)
+          const osc1 = audioCtx.createOscillator();
+          const gain1 = audioCtx.createGain();
+          osc1.type = "sawtooth";
+          osc1.frequency.setValueAtTime(783.99, audioCtx.currentTime);
+          osc1.frequency.exponentialRampToValueAtTime(392.00, audioCtx.currentTime + 0.35);
+          gain1.gain.setValueAtTime(0.35, audioCtx.currentTime);
+          gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+          osc1.connect(gain1);
+          gain1.connect(audioCtx.destination);
+          osc1.start();
+          osc1.stop(audioCtx.currentTime + 0.35);
+
+          // Note 2: Deep Drop Tone (523Hz C5 -> 261Hz C4 delayed 0.08s)
+          const osc2 = audioCtx.createOscillator();
+          const gain2 = audioCtx.createGain();
+          osc2.type = "triangle";
+          osc2.frequency.setValueAtTime(523.25, audioCtx.currentTime + 0.08);
+          osc2.frequency.exponentialRampToValueAtTime(261.63, audioCtx.currentTime + 0.55);
+          gain2.gain.setValueAtTime(0.45, audioCtx.currentTime + 0.08);
+          gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.55);
+          osc2.connect(gain2);
+          gain2.connect(audioCtx.destination);
+          osc2.start(audioCtx.currentTime + 0.08);
+          osc2.stop(audioCtx.currentTime + 0.55);
+        } else {
+          // --- Distinct BUY CONFIRMED Audio Chime (Ascending High Bell Cha-Ching) ---
+          // Note 1: Bright High Bell (987Hz - B5)
+          const osc1 = audioCtx.createOscillator();
+          const gain1 = audioCtx.createGain();
+          osc1.type = "sine";
+          osc1.frequency.setValueAtTime(987.77, audioCtx.currentTime);
+          gain1.gain.setValueAtTime(0.4, audioCtx.currentTime);
+          gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+          osc1.connect(gain1);
+          gain1.connect(audioCtx.destination);
+          osc1.start();
+          osc1.stop(audioCtx.currentTime + 0.5);
+
+          // Note 2: Cash Register High Octave Chime (1318.5Hz - E6 delayed 0.08s)
+          const osc2 = audioCtx.createOscillator();
+          const gain2 = audioCtx.createGain();
+          osc2.type = "triangle";
+          osc2.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.08);
+          gain2.gain.setValueAtTime(0.5, audioCtx.currentTime + 0.08);
+          gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.65);
+          osc2.connect(gain2);
+          gain2.connect(audioCtx.destination);
+          osc2.start(audioCtx.currentTime + 0.08);
+          osc2.stop(audioCtx.currentTime + 0.65);
+        }
       } catch {}
     }
   }, [mtfConfluence?.alignedCount, mtfConfluence?.direction, prediction?.direction, prediction?.action]);
