@@ -1746,6 +1746,51 @@ export default function MarketDetail() {
                     </div>
                   </div>
 
+                  {/* Prominent Top Status Banner with Banker & Retailer Live Status Detail */}
+                  <div className={cn(
+                    "p-2.5 rounded-xl border flex flex-col gap-1.5 font-mono transition-all shadow-md",
+                    (prediction?.isHighVolatility || hasHighImpactNews)
+                      ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
+                      : (!isMonitoring)
+                        ? "bg-emerald-500/25 border-emerald-500/50 text-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.2)]"
+                        : "bg-rose-500/20 border-rose-500/40 text-rose-300"
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "w-2.5 h-2.5 rounded-full",
+                          (prediction?.isHighVolatility || hasHighImpactNews)
+                            ? "bg-amber-400 animate-ping"
+                            : (!isMonitoring)
+                              ? "bg-emerald-400 animate-ping"
+                              : "bg-rose-400"
+                        )} />
+                        <span className="text-[10px] font-black uppercase tracking-wider">LIVE STATUS [{timeframe}]</span>
+                      </div>
+                      <span className="text-[11px] font-black uppercase tracking-tight">
+                        {(prediction?.isHighVolatility || hasHighImpactNews)
+                          ? `🔴 DO NOT TRADE (VOLATILITY SPIKE)`
+                          : (!isMonitoring)
+                            ? "🟢 TRADE NOW (HIGH CONFLUENCE)"
+                            : isMtfConflict ? "🔴 DO NOT TRADE (TIMEFRAME CONFLICT)" : "🔴 DO NOT TRADE (STANDBY)"}
+                      </span>
+                    </div>
+
+                    {/* Live Banker & Retailer Sub-Status Detail Bar */}
+                    <div className="text-[8.5px] font-bold pt-1 border-t border-white/10 flex items-center justify-between opacity-95">
+                      <span className="text-white/80">🏦 BANKER & RETAIL FLOW:</span>
+                      <span className="font-black uppercase text-amber-200">
+                        {(prediction?.isHighVolatility || hasHighImpactNews)
+                          ? "⚡ BANKERS EXECUTING NEWS ORDERS | 👤 RETAIL WHIPSAW RISK"
+                          : (!isMonitoring)
+                            ? "🏦 BANK ACCUMULATION (4/4 ALIGNED) | 👤 RETAIL TRAPPED"
+                            : isMtfConflict
+                              ? "🔍 BANKERS COLLECTING STOP LOSS | 👤 RETAIL PANIC SELLING"
+                              : "⌛ BANKERS BUILDING POSITION | 👤 RETAIL NOISE"}
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Multi-Timeframe Confirmation Matrix Card */}
                   <div className="bg-slate-900/90 border border-slate-700/60 p-2.5 rounded-xl space-y-2 shadow-md">
                     <div className="flex items-center justify-between">
