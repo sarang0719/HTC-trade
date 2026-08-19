@@ -1648,23 +1648,25 @@ export default function MarketDetail() {
       />
 
       {/* ── AI BOT POPUP (bottom-right floating) ── */}
-      <div className="fixed bottom-6 right-8 flex flex-col items-end gap-3 z-50">
+      <div className="fixed bottom-3 right-3 sm:bottom-5 sm:right-6 flex flex-col items-end gap-3 z-50">
         {showAiBotPopup && (
-          <div className="bg-background border border-primary/30 p-5 rounded-2xl shadow-2xl max-w-[340px] mb-2 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+          <div className="bg-background/95 backdrop-blur-2xl border-2 border-primary/40 p-4 rounded-2xl shadow-2xl w-[480px] max-w-[95vw] sm:w-[500px] mb-2 animate-in fade-in zoom-in-95 duration-200 font-sans">
+            <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <BrainCircuit className="w-4 h-4 animate-pulse text-primary" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary">QUANTEDGE V12.1 · SMC</span>
               </div>
-              <span className="text-[8px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase font-bold">Next Candle</span>
-              <button onClick={() => setShowAiBotPopup(false)} className="text-muted-foreground hover:text-white"><Plus className="w-4 h-4 rotate-45" /></button>
+              <div className="flex items-center gap-2">
+                <span className="text-[8px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase font-bold">Next Candle</span>
+                <button onClick={() => setShowAiBotPopup(false)} className="text-muted-foreground hover:text-white"><Plus className="w-4 h-4 rotate-45" /></button>
+              </div>
             </div>
 
             {(() => {
               const isMtfConflict = mtfConfluence.badgeColor === "rose";
               const unifiedSignal = isMtfConflict 
-                ? "MONITORING" 
-                : (mtfConfluence.direction !== "MONITORING" ? mtfConfluence.direction : (prediction ? (prediction.action !== "MONITORING" ? prediction.action : aiSignal) : aiSignal));
+                ? "MONITORING"
+                : (prediction?.action === "MONITORING" ? "MONITORING" : prediction?.direction ?? "MONITORING");
 
               const isBuy  = unifiedSignal === "BUY";
               const isSell = unifiedSignal === "SELL";
@@ -1676,27 +1678,19 @@ export default function MarketDetail() {
               const msg    = isMtfConflict ? "⚠️ TIMEFRAME CONFLICT: Higher timeframe (1H) opposes short-term direction. Standby." : (prediction?.message ?? "QUANTEDGE V12.1 · SMC — Walk-Forward Optimized Smart Money Engine.");
 
               return (
-                <div className="space-y-3">
-                  {/* Accuracy Badge Banner */}
+                <div className="space-y-2.5">
+                  {/* Accuracy & Target Forecast Header */}
                   <div className="bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-xl flex items-center justify-between shadow-inner">
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
                       <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wide">Prediction Accuracy</span>
                     </div>
-                    <span className="text-[11px] font-black font-mono text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-lg border border-emerald-500/30">
-                      {winRate}% ACCURACY
-                    </span>
-                  </div>
-
-                  {/* Target Timeframe Indicator */}
-                  <div className="bg-white/5 border border-white/10 p-2 rounded-xl flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase">Target Forecast</span>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[9px] font-mono font-bold bg-primary/20 text-primary px-1.5 py-0.5 rounded border border-primary/30">
                         ATR: ${liveVolatility.atrValue}
                       </span>
-                      <span className="text-[10px] font-black font-mono text-white flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Upcoming {timeframe} Candle
+                      <span className="text-[11px] font-black font-mono text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+                        {winRate}% ACCURACY
                       </span>
                     </div>
                   </div>
