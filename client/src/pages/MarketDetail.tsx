@@ -1939,19 +1939,32 @@ export default function MarketDetail() {
                           </div>
                         </div>
 
-                        {/* Confluence & Conflict Status Card */}
+                        {/* Banker & Retailer Real-Time Market Action Card */}
                         <div className={cn(
-                          "p-1.5 rounded-lg border text-[8px] font-bold font-mono uppercase flex items-center justify-between shadow-sm",
-                          isMtfConflict ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : (!isMonitoring ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-white/5 text-muted-foreground border-white/10")
+                          "p-2 rounded-lg border text-[8px] font-mono uppercase flex flex-col gap-1 shadow-sm",
+                          isMtfConflict
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                            : (!isMonitoring)
+                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
+                              : "bg-rose-500/20 text-rose-300 border-rose-500/40"
                         )}>
-                          <span>CONFLUENCE / CONFLICT STATUS:</span>
-                          <span className="font-black">
+                          <div className="flex items-center justify-between font-black border-b border-white/10 pb-1">
+                            <span className="text-white/80">LIVE MARKET ACTION (RIGHT NOW):</span>
+                            <span className="text-[7.5px] px-1.5 py-0.2 bg-white/10 rounded font-bold">
+                              {!isMonitoring ? "🟢 ACCUMULATING" : isMtfConflict ? "🔍 LIQUIDITY SWEEP" : "⌛ BUILDING"}
+                            </span>
+                          </div>
+                          <div className="text-[8.5px] font-black leading-snug tracking-tight">
                             {isMtfConflict
-                              ? "⚠️ TIMEFRAME CONFLICT — STANDBY"
+                              ? (lowerWick > upperWick
+                                  ? "🏦 BANKERS: BUYING THE DIP (ORDER BLOCK) | 👤 RETAILERS: PANIC SELLING AT BOTTOM"
+                                  : "🏦 BANKERS: SELLING AT RESISTANCE | 👤 RETAILERS: TRAPPED CHASING BREAKOUT")
                               : (!isMonitoring)
-                                ? "🟢 PERFECT HARMONY — EXECUTE"
-                                : "⌛ BUILDING ALIGNMENT"}
-                          </span>
+                                ? (isBull
+                                    ? "🏦 BANKERS: BUYING IN 4/4 HARMONY | 👤 RETAILERS: TRAPPED SHORTING AGAINST TREND"
+                                    : "🏦 BANKERS: SELLING IN 4/4 HARMONY | 👤 RETAILERS: TRAPPED BUYING AGAINST TREND")
+                                : "⌛ BANKERS: BUILDING POSITION | 👤 RETAILERS: WEAK CONFLUENCE NOISE"}
+                          </div>
                         </div>
                       </div>
                     );
