@@ -1875,10 +1875,38 @@ export default function MarketDetail() {
                           <div className="text-[8px] text-emerald-200/80 font-medium">{detail}</div>
                         </div>
 
-                        {/* Retailer Trap Card */}
-                        <div className="bg-sky-500/10 border border-sky-500/30 p-1.5 rounded-lg flex items-center justify-between text-[8px]">
-                          <span className="font-bold text-sky-300 uppercase">RETAILER STATUS:</span>
-                          <span className="font-black text-sky-200 uppercase">{retailStatus}</span>
+                        {/* Banker & Retailer Directional Breakdown Grid */}
+                        <div className="grid grid-cols-2 gap-1.5 text-[8px] font-mono">
+                          {/* Banker Direction */}
+                          <div className="bg-emerald-500/15 border border-emerald-500/30 p-1.5 rounded-lg flex flex-col gap-0.5">
+                            <span className="text-[7.5px] font-bold text-muted-foreground uppercase">🏦 BANKER DIRECTION:</span>
+                            <span className="font-black text-emerald-300 uppercase">
+                              {mtfConfluence.direction === "BUY" ? "🟢 BUY / UP (ACCUMULATION)" : mtfConfluence.direction === "SELL" ? "🔻 SELL / DOWN (DISTRIBUTION)" : "⚪ STANDBY (MONITORING)"}
+                            </span>
+                          </div>
+
+                          {/* Retailer Trap Direction */}
+                          <div className="bg-rose-500/15 border border-rose-500/30 p-1.5 rounded-lg flex flex-col gap-0.5">
+                            <span className="text-[7.5px] font-bold text-muted-foreground uppercase">👤 RETAILER TRAP DIRECTION:</span>
+                            <span className="font-black text-rose-300 uppercase">
+                              {mtfConfluence.direction === "BUY" ? "🔻 SHORTING (TRAPPED AT SUPPORT)" : mtfConfluence.direction === "SELL" ? "🟢 BUYING (TRAPPED AT RESISTANCE)" : "⚪ MIXED RETAIL FLOW"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Confluence & Conflict Status Card */}
+                        <div className={cn(
+                          "p-1.5 rounded-lg border text-[8px] font-bold font-mono uppercase flex items-center justify-between shadow-sm",
+                          isMtfConflict ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : (!isMonitoring ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-white/5 text-muted-foreground border-white/10")
+                        )}>
+                          <span>CONFLUENCE / CONFLICT STATUS:</span>
+                          <span className="font-black">
+                            {isMtfConflict
+                              ? "⚠️ TIMEFRAME CONFLICT — STANDBY"
+                              : (!isMonitoring)
+                                ? "🟢 PERFECT HARMONY — EXECUTE"
+                                : "⌛ BUILDING ALIGNMENT"}
+                          </span>
                         </div>
                       </div>
                     );
