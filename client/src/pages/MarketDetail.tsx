@@ -442,8 +442,8 @@ export default function MarketDetail() {
     };
   }, [prediction, hasHighImpactNews, candlesRef.current?.length]);
 
-  // --- Real-Time Sudden Fall Alert & Audio Warning Engine ---
-  const [suddenFallAlert, setSuddenFallAlert] = useState<{ active: boolean; message: string; dropAmt: number } | null>(null);
+  // --- Real-Time Dual Spike (UP/DOWN) & Imminent Volatility Predictor Engine ---
+  const [spikeAlert, setSpikeAlert] = useState<{ active: boolean; type: "DROP" | "SURGE" | "IMMINENT"; message: string; amount: number } | null>(null);
   const lastAlertTimeRef = useRef<number>(0);
 
   useEffect(() => {
@@ -454,32 +454,50 @@ export default function MarketDetail() {
     const prevC = candles[n - 1];
     if (!currC || !prevC) return;
 
-    const dropAmt = prevC.close - currC.close;
+    const moveAmt = currC.close - prevC.close;
+    const absMove = Math.abs(moveAmt);
     const isGold = instrument?.symbol?.toUpperCase().includes("XAU");
     const isBtc = instrument?.symbol?.toUpperCase().includes("BTC");
-    const threshold = isGold ? 1.20 : isBtc ? 150 : (currC.open * 0.0025);
+    const threshold = isGold ? 1.10 : isBtc ? 140 : (currC.open * 0.0022);
 
-    const isSuddenDrop = dropAmt >= threshold && (currC.close < currC.open);
+    // Pre-spike imminent volatility detector (ATR acceleration + volume expansion)
+    const isImminentSpike = (prediction?.volatilityRatio ?? 1.0) >= 1.65 || (currC.high - currC.low) > threshold * 1.3;
+    const isSuddenDrop = moveAmt <= -threshold;
+    const isSuddenSurge = moveAmt >= threshold;
 
-    if (isSuddenDrop && Date.now() - lastAlertTimeRef.current > 15000) {
+    if ((isSuddenDrop || isSuddenSurge || isImminentSpike) && Date.now() - lastAlertTimeRef.current > 12000) {
       lastAlertTimeRef.current = Date.now();
-      const msg = `🚨 SUDDEN ${instrument?.symbol} FALL DETECTED (-$${dropAmt.toFixed(2)}) — STANDBY`;
-      setSuddenFallAlert({ active: true, message: msg, dropAmt });
+      const type = isSuddenDrop ? "DROP" : isSuddenSurge ? "SURGE" : "IMMINENT";
+      const msg = isSuddenDrop
+        ? `🚨 SUDDEN ${instrument?.symbol} DROP DETECTED (-$${absMove.toFixed(2)}) — STANDBY`
+        : isSuddenSurge
+          ? `🚀 SUDDEN ${instrument?.symbol} SURGE DETECTED (+$${absMove.toFixed(2)}) — VOLATILITY SPIKE`
+          : `⚠️ IMMINENT 1M VOLATILITY SPIKE PREDICTED — AVOID TRADING`;
+
+      setSpikeAlert({ active: true, type, message: msg, amount: absMove });
 
       toast({
-        title: "🚨 SUDDEN MARKET FALL ALERT",
-        description: `Sudden price drop detected (-$${dropAmt.toFixed(2)}). Banks collecting liquidity. Standby & do not enter CALL trades.`,
-        variant: "destructive"
+        title: isSuddenDrop ? "🚨 SUDDEN DROP ALERT" : isSuddenSurge ? "🚀 SUDDEN SURGE ALERT" : "⚠️ IMMINENT VOLATILITY SPIKE ALERT",
+        description: isSuddenDrop
+          ? `Sudden drop of -$${absMove.toFixed(2)} detected. Banks sweeping liquidity. Avoid entering CALL trades.`
+          : isSuddenSurge
+            ? `Sudden price surge of +$${absMove.toFixed(2)} detected. High 1m volatility active.`
+            : `Imminent 1m volatility expansion predicted (${prediction?.volatilityRatio ?? 1.6}x ATR). Standby to avoid bad trades.`,
+        variant: isSuddenDrop || isImminentSpike ? "destructive" : "default"
       });
 
-      // Play Alert Warning Chime Sound
+      // Play Alert Audio Sound (Sawtooth Drop Pitch vs Ascending Surge Pitch)
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(520, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(260, audioCtx.currentTime + 0.45);
+        osc.type = isSuddenDrop ? "sawtooth" : "triangle";
+        
+        const startFreq = isSuddenDrop ? 560 : 350;
+        const endFreq = isSuddenDrop ? 240 : 700;
+        
+        osc.frequency.setValueAtTime(startFreq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, audioCtx.currentTime + 0.45);
         gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
         osc.connect(gain);
@@ -489,8 +507,8 @@ export default function MarketDetail() {
       } catch {}
 
       setTimeout(() => {
-        setSuddenFallAlert(null);
-      }, 12000);
+        setSpikeAlert(null);
+      }, 10000);
     }
   }, [displayPrice, candlesRef.current?.length, instrument?.symbol]);
 
@@ -1770,15 +1788,28 @@ export default function MarketDetail() {
                     </div>
                   </div>
 
-                  {/* Real-Time Sudden Fall Warning Alert Banner (Dynamic) */}
-                  {suddenFallAlert?.active && (
-                    <div className="bg-rose-500/25 border-2 border-rose-500 text-rose-200 p-2.5 rounded-xl flex items-center justify-between shadow-lg animate-pulse">
+                  {/* Real-Time Dual Spike & Imminent Volatility Warning Banner (Dynamic) */}
+                  {spikeAlert?.active && (
+                    <div className={cn(
+                      "p-2.5 rounded-xl flex items-center justify-between shadow-lg animate-pulse border-2",
+                      spikeAlert.type === "DROP" || spikeAlert.type === "IMMINENT"
+                        ? "bg-rose-500/25 border-rose-500 text-rose-200"
+                        : "bg-emerald-500/25 border-emerald-500 text-emerald-200"
+                    )}>
                       <div className="flex items-center gap-1.5 font-mono text-[9px] font-black uppercase">
-                        <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
-                        <span>🚨 SUDDEN FALL DETECTED (-${suddenFallAlert.dropAmt.toFixed(2)})</span>
+                        <span className={cn(
+                          "w-2 h-2 rounded-full animate-ping",
+                          spikeAlert.type === "DROP" || spikeAlert.type === "IMMINENT" ? "bg-rose-400" : "bg-emerald-400"
+                        )} />
+                        <span>{spikeAlert.message}</span>
                       </div>
-                      <span className="text-[8px] font-black font-mono bg-rose-600 text-white px-2 py-0.5 rounded uppercase">
-                        STANDBY
+                      <span className={cn(
+                        "text-[8px] font-black font-mono px-2 py-0.5 rounded uppercase",
+                        spikeAlert.type === "DROP" || spikeAlert.type === "IMMINENT"
+                          ? "bg-rose-600 text-white"
+                          : "bg-emerald-600 text-white"
+                      )}>
+                        {spikeAlert.type === "IMMINENT" ? "AVOID TRADE" : "VOLATILITY"}
                       </span>
                     </div>
                   )}
