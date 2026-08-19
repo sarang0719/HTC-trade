@@ -1740,31 +1740,56 @@ export default function MarketDetail() {
 
                   {/* Dynamic Action Signal: TRADE NOW vs DO NOT TRADE (All Timeframes) */}
                   <div className={cn(
-                    "p-2 rounded-xl border flex items-center justify-between font-mono transition-all shadow-sm",
+                    "p-2.5 rounded-xl border flex flex-col gap-1 font-mono transition-all shadow-sm",
                     (prediction?.isHighVolatility || hasHighImpactNews)
                       ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
                       : (!isMonitoring)
                         ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
                         : "bg-rose-500/20 border-rose-500/40 text-rose-300"
                   )}>
-                    <span className="text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                      <span className={cn(
-                        "w-2 h-2 rounded-full",
-                        (prediction?.isHighVolatility || hasHighImpactNews)
-                          ? "bg-amber-400 animate-ping"
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                        <span className={cn(
+                          "w-2 h-2 rounded-full",
+                          (prediction?.isHighVolatility || hasHighImpactNews)
+                            ? "bg-amber-400 animate-ping"
+                            : (!isMonitoring)
+                              ? "bg-emerald-400 animate-ping"
+                              : "bg-rose-400"
+                        )} />
+                        STATUS [{timeframe}]
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-tight">
+                        {(prediction?.isHighVolatility || hasHighImpactNews)
+                          ? `🔴 DO NOT TRADE (HIGH VOLATILITY ${prediction?.volatilityRatio ? '(' + prediction.volatilityRatio + 'x ATR)' : 'SPIKE'})`
                           : (!isMonitoring)
-                            ? "bg-emerald-400 animate-ping"
-                            : "bg-rose-400"
-                      )} />
-                      STATUS [{timeframe}]
-                    </span>
-                    <span className="text-[10px] font-black uppercase tracking-tight">
-                      {(prediction?.isHighVolatility || hasHighImpactNews)
-                        ? `🔴 DO NOT TRADE (HIGH VOLATILITY ${prediction?.volatilityRatio ? '(' + prediction.volatilityRatio + 'x ATR)' : 'SPIKE'})`
-                        : (!isMonitoring)
-                          ? "🟢 TRADE NOW (HIGH CONFLUENCE)"
-                          : isMtfConflict ? "🔴 DO NOT TRADE (TIMEFRAME CONFLICT — 1H OPPOSED)" : "🔴 DO NOT TRADE (STANDBY)"}
-                    </span>
+                            ? "🟢 TRADE NOW (HIGH CONFLUENCE)"
+                            : isMtfConflict ? "🔴 DO NOT TRADE (TIMEFRAME CONFLICT)" : "🔴 DO NOT TRADE (STANDBY)"}
+                      </span>
+                    </div>
+
+                    {/* Smart Money Market Phase Helper Pill */}
+                    <div className="text-[8.5px] font-bold font-mono pt-1 border-t border-white/10 flex items-center justify-between opacity-95">
+                      <span className="text-muted-foreground uppercase">SMART MONEY PHASE:</span>
+                      <span className={cn(
+                        "font-black px-1.5 py-0.5 rounded uppercase",
+                        (prediction?.isHighVolatility || hasHighImpactNews)
+                          ? "bg-amber-500/30 text-amber-200"
+                          : isMtfConflict
+                            ? "bg-sky-500/20 text-sky-300"
+                            : (!isMonitoring)
+                              ? "bg-emerald-500/30 text-emerald-200"
+                              : "bg-rose-500/30 text-rose-200"
+                      )}>
+                        {(prediction?.isHighVolatility || hasHighImpactNews)
+                          ? "⚡ LIQUIDITY SPIKE — WAIT FOR VOLATILITY SETTLE"
+                          : isMtfConflict
+                            ? "🔍 BANKS COLLECTING STOP-LOSS LIQUIDITY → WAIT PULLBACK"
+                            : (!isMonitoring)
+                              ? "🚀 HIGH CONFLUENCE ENTRY READY — EXECUTE TRADE"
+                              : "⌛ BUILDING INDICATOR CONFLUENCE — STANDBY"}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Main Prediction Box */}
