@@ -294,17 +294,21 @@ export function predictNextCandle(
       inBearZone ? "Price rejecting Bearish Order Block / FVG → Institutional Sellers" :
         "Mid-zone price action");
 
-  // 2. Exhaustion Rejection & Trap Filter [W=4] (Crucial for preventing bad breakout predictions!)
+  // 2. Exhaustion Rejection & Liquidity Sweep Spike Engine [W=5]
   const upperWick = c.high - Math.max(c.open, c.close);
   const lowerWick = Math.min(c.open, c.close) - c.low;
-  const isBearishExhaustion = (upperWick / rangeC > 0.38 && (rsiV > 64 || bodyC <= 0)) || (rsiV > 76);
-  const isBullishExhaustion = (lowerWick / rangeC > 0.38 && (rsiV < 36 || bodyC >= 0)) || (rsiV < 24);
-  score("Exhaustion & Liquidity Trap Filter", isBullishExhaustion, isBearishExhaustion, activeW.EXHAUSTION,
-    isBullishExhaustion ? `Wick rejection at lows (${(lowerWick / rangeC * 100).toFixed(0)}%) + RSI ${rsiV.toFixed(1)} → Reversal UP` :
-      isBearishExhaustion ? `Wick rejection at highs (${(upperWick / rangeC * 100).toFixed(0)}%) + RSI ${rsiV.toFixed(1)} → Reversal DOWN` :
+  const lowerWickRatio = lowerWick / rangeC;
+  const upperWickRatio = upperWick / rangeC;
+
+  const isBullishExhaustion = (lowerWickRatio > 0.32 && (rsiV < 42 || bodyC >= -rangeC * 0.3)) || (rsiV < 26) || (inBullZone && lowerWickRatio > 0.28);
+  const isBearishExhaustion = (upperWickRatio > 0.32 && (rsiV > 58 || bodyC <= rangeC * 0.3)) || (rsiV > 74) || (inBearZone && upperWickRatio > 0.28);
+  
+  score("Exhaustion & Liquidity Sweep Spike Engine", isBullishExhaustion, isBearishExhaustion, activeW.EXHAUSTION,
+    isBullishExhaustion ? `Lower wick sweep (${(lowerWickRatio * 100).toFixed(0)}%) + RSI ${rsiV.toFixed(1)} → Sudden UP Surge` :
+      isBearishExhaustion ? `Upper wick sweep (${(upperWickRatio * 100).toFixed(0)}%) + RSI ${rsiV.toFixed(1)} → Sudden DOWN Drop` :
         "Balanced candle anatomy");
 
-  // 3. Structure Break & Change of Character (BOS & CHoCH) [W=3]
+  // 3. Structure Break & Change of Character (BOS & CHoCH) [W=4]
   const structBull = bos === "BUY" || choch === "BUY";
   const structBear = bos === "SELL" || choch === "SELL";
   score("Structural Order Flow (BOS/CHoCH)", structBull, structBear, activeW.BOS_CHOCH,
@@ -312,7 +316,7 @@ export function predictNextCandle(
       structBear ? `Bearish ${bos ? "BOS" : "CHoCH"} confirmed → Downside target` :
         "Consolidating structure");
 
-  // 4. Micro-Timeframe EMA Stack & Velocity [W=3]
+  // 4. Micro-Timeframe EMA Stack & Velocity [W=4]
   const emaStackBull = c.close > ema3[n] && ema3[n] >= ema8[n] && ema8[n] >= ema21[n];
   const emaStackBear = c.close < ema3[n] && ema3[n] <= ema8[n] && ema8[n] <= ema21[n];
   score("Responsive EMA Micro-Stack (3/8/21)", emaStackBull, emaStackBear, activeW.EMA_STACK,
@@ -320,13 +324,13 @@ export function predictNextCandle(
       emaStackBear ? `Bearish EMA Expansion (EMA3 < EMA8 < EMA21)` :
         "EMAs compressing");
 
-  // 5. Volumetric Order Flow & ATR Expansion [W=3]
-  const volExpansion = rangeC > atrV * 0.85 && Math.abs(bodyC) / rangeC > 0.52;
+  // 5. Volumetric Order Flow & ATR Spike Expansion [W=3]
+  const volExpansion = rangeC > atrV * 0.85 && Math.abs(bodyC) / rangeC > 0.55;
   const volBull = volExpansion && bodyC > 0;
   const volBear = volExpansion && bodyC < 0;
   score("Volumetric Momentum Expansion", volBull, volBear, activeW.VOLUMETRIC,
-    volBull ? `High-volume Bullish Body (+${((bodyC / c.open) * 100).toFixed(2)}%)` :
-      volBear ? `High-volume Bearish Body (${((bodyC / c.open) * 100).toFixed(2)}%)` :
+    volBull ? `High-volume Bullish Body (+${((bodyC / c.open) * 100).toFixed(2)}%) → Sudden UP Expansion` :
+      volBear ? `High-volume Bearish Body (${((bodyC / c.open) * 100).toFixed(2)}%) → Sudden DOWN Expansion` :
         "Normal volume candle");
 
   // 6. Dynamic RSI Acceleration & Midline Cross [W=2]
