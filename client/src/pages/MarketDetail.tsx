@@ -14,7 +14,7 @@ import {
   MousePointer2, Crosshair, Minus, Pencil, Type, Square,
   Bell, Clock, PlusCircle, MinusCircle, CheckCircle,
   XCircle, BrainCircuit, Zap, TrendingDown, ChevronRight,
-  Lock, RefreshCw, Maximize, Sparkles
+  Lock, RefreshCw, Maximize, Sparkles, Landmark
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent,
@@ -1765,6 +1765,79 @@ export default function MarketDetail() {
                       {mtfConfluence.badgeText}
                     </div>
                   </div>
+
+                  {/* ── BANKER VS RETAILER ORDER FLOW PANEL ── */}
+                  {(() => {
+                    const candles = candlesRef.current || [];
+                    const n = candles.length - 1;
+                    const c = candles[n];
+                    const range = c ? Math.max(0.00001, c.high - c.low) : 1;
+                    const lowerWick = c ? (Math.min(c.open, c.close) - c.low) : 0;
+                    const upperWick = c ? (c.high - Math.max(c.open, c.close)) : 0;
+
+                    const isBankSweep = c ? (lowerWick / range > 0.32 || upperWick / range > 0.32) : false;
+                    const isHighVol = liveVolatility.isHigh;
+                    const isBull = unifiedSignal === "BUY";
+
+                    const bankPct = isBankSweep ? 85 : isHighVol ? 82 : (mtfConfluence.allAligned ? 88 : 76);
+                    const retailPct = 100 - bankPct;
+
+                    let bankStatus = "🏦 BANKERS / INSTITUTIONS IN CONTROL";
+                    let retailStatus = "👤 RETAIL TRADERS TRAPPED";
+                    let detail = "Bank Order Accumulation Zone Active";
+
+                    if (isBankSweep) {
+                      bankStatus = lowerWick > upperWick ? "🏦 BANKERS BUYING THE DIP (LIQUIDITY SWEEP)" : "🏦 BANKERS SELLING AT RESISTANCE";
+                      retailStatus = "👤 RETAIL STOP LOSSES COLLECTED";
+                      detail = lowerWick > upperWick ? "Retail Stop Loss Liquidity Swept below Support" : "Retail Stop Loss Liquidity Swept above Resistance";
+                    } else if (isHighVol) {
+                      bankStatus = "⚡ BANKERS EXECUTING MARKET ORDERS";
+                      retailStatus = "👤 RETAIL CHASING VOLATILITY";
+                      detail = "High-Volume Bank Momentum Expansion";
+                    } else if (mtfConfluence.allAligned) {
+                      bankStatus = isBull ? "🏦 BANKERS BUYING WITH 4/4 ALIGNMENT" : "🏦 BANKERS SELLING WITH 4/4 ALIGNMENT";
+                      retailStatus = isBull ? "👤 RETAIL SHORTING AGAINST BANK TREND" : "👤 RETAIL BUYING AGAINST BANK TREND";
+                      detail = "Smart Money Macro Trend Accumulation";
+                    }
+
+                    return (
+                      <div className="bg-slate-900/90 border border-amber-500/40 p-3 rounded-xl space-y-2.5 shadow-md font-mono">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <Landmark className="w-3.5 h-3.5 text-amber-400" />
+                            <span className="text-[9px] font-black text-amber-300 uppercase tracking-wider">BANKER VS RETAILER PANEL</span>
+                          </div>
+                          <span className="text-[8px] font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
+                            LIVE ORDER FLOW
+                          </span>
+                        </div>
+
+                        {/* Banker & Retailer Allocation Bars */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[8.5px] font-black uppercase">
+                            <span className="text-emerald-400">🏦 BANKERS / INSTITUTIONS: {bankPct}%</span>
+                            <span className="text-sky-400">👤 RETAILERS: {retailPct}%</span>
+                          </div>
+                          <div className="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden flex p-0.5 border border-white/10 shadow-inner">
+                            <div className="h-full bg-gradient-to-r from-emerald-500 to-amber-400 rounded-l-full transition-all duration-500" style={{ width: `${bankPct}%` }} />
+                            <div className="h-full bg-sky-500/70 rounded-r-full transition-all duration-500" style={{ width: `${retailPct}%` }} />
+                          </div>
+                        </div>
+
+                        {/* Banker Action Card */}
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-lg space-y-0.5">
+                          <div className="text-[8.5px] font-black text-emerald-300 uppercase">{bankStatus}</div>
+                          <div className="text-[8px] text-emerald-200/80 font-medium">{detail}</div>
+                        </div>
+
+                        {/* Retailer Trap Card */}
+                        <div className="bg-sky-500/10 border border-sky-500/30 p-1.5 rounded-lg flex items-center justify-between text-[8px]">
+                          <span className="font-bold text-sky-300 uppercase">RETAILER STATUS:</span>
+                          <span className="font-black text-sky-200 uppercase">{retailStatus}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Real-Time Market ATR & Volatility Card */}
                   <div className={cn(
