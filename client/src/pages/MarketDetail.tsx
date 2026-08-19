@@ -1663,7 +1663,12 @@ export default function MarketDetail() {
             </div>
 
             {(() => {
-              const isMtfConflict = mtfConfluence.badgeColor === "rose";
+              const hasDirectionMismatch = Boolean(
+                mtfConfluence.direction !== "MONITORING" &&
+                prediction?.direction &&
+                mtfConfluence.direction !== prediction.direction
+              );
+              const isMtfConflict = mtfConfluence.badgeColor === "rose" || hasDirectionMismatch;
               const unifiedSignal = isMtfConflict 
                 ? "MONITORING"
                 : (prediction?.action === "MONITORING" ? "MONITORING" : prediction?.direction ?? "MONITORING");
