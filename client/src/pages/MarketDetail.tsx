@@ -1696,7 +1696,7 @@ export default function MarketDetail() {
       {/* ── AI BOT POPUP (bottom-right floating) ── */}
       <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-5 flex flex-col items-end gap-2 z-50">
         {showAiBotPopup && (
-          <div className="bg-background/95 backdrop-blur-2xl border-2 border-primary/40 p-3.5 rounded-2xl shadow-2xl w-[540px] max-w-[96vw] sm:w-[560px] mb-1 animate-in fade-in zoom-in-95 duration-200 font-sans">
+          <div className="bg-background/95 backdrop-blur-2xl border-2 border-primary/40 p-3.5 rounded-2xl shadow-2xl w-[540px] max-w-[96vw] sm:w-[560px] max-h-[85vh] overflow-y-auto custom-scrollbar pr-2 mb-1 animate-in fade-in zoom-in-95 duration-200 font-sans">
             <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <BrainCircuit className="w-4 h-4 animate-pulse text-primary" />
