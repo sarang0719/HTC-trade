@@ -1709,16 +1709,14 @@ export default function MarketDetail() {
             </div>
 
             {(() => {
-              const isShortTermTF = timeframe === "1m" || timeframe === "5m";
-              const hasDirectionMismatch = isShortTermTF && Boolean(
-                mtfConfluence.direction !== "MONITORING" &&
-                prediction?.direction &&
-                mtfConfluence.direction !== prediction.direction
-              );
-              const isMtfConflict = isShortTermTF && (mtfConfluence.badgeColor === "rose" || hasDirectionMismatch);
-              const unifiedSignal = isMtfConflict 
+              // 100% Single-Source-of-Truth Directional Synchronization Lock
+              const mtfDir = mtfConfluence.direction;
+              const predDir = prediction?.direction ?? "MONITORING";
+              const isMtfConflict = mtfConfluence.badgeColor === "rose" || (mtfDir !== "MONITORING" && predDir !== "MONITORING" && mtfDir !== predDir);
+
+              const unifiedSignal: "BUY" | "SELL" | "MONITORING" = isMtfConflict
                 ? "MONITORING"
-                : (prediction?.action === "MONITORING" ? "MONITORING" : prediction?.direction ?? "MONITORING");
+                : (mtfDir !== "MONITORING" ? mtfDir : (prediction?.action === "MONITORING" ? "MONITORING" : predDir));
 
               const isBuy  = unifiedSignal === "BUY";
               const isSell = unifiedSignal === "SELL";
