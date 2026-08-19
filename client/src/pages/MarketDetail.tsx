@@ -585,32 +585,41 @@ export default function MarketDetail() {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
 
         if (isSellSignal) {
-          // --- Distinct SELL CONFIRMED Audio Chime (Descending Punchy Synth Drop) ---
-          // Note 1: High Punch Warning (784Hz G5 -> 392Hz G4)
+          // --- Realistic Liquid Water Drop / Water Bubble Sound Synthesizer ---
+          // Drop 1: Primary Water Drip (Sine pitch envelope: 320Hz -> 1450Hz -> 450Hz)
           const osc1 = audioCtx.createOscillator();
           const gain1 = audioCtx.createGain();
-          osc1.type = "sawtooth";
-          osc1.frequency.setValueAtTime(783.99, audioCtx.currentTime);
-          osc1.frequency.exponentialRampToValueAtTime(392.00, audioCtx.currentTime + 0.35);
-          gain1.gain.setValueAtTime(0.35, audioCtx.currentTime);
-          gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+          osc1.type = "sine";
+          osc1.frequency.setValueAtTime(320, audioCtx.currentTime);
+          osc1.frequency.exponentialRampToValueAtTime(1450, audioCtx.currentTime + 0.07);
+          osc1.frequency.exponentialRampToValueAtTime(450, audioCtx.currentTime + 0.16);
+          
+          gain1.gain.setValueAtTime(0.01, audioCtx.currentTime);
+          gain1.gain.linearRampToValueAtTime(0.55, audioCtx.currentTime + 0.04);
+          gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.16);
+          
           osc1.connect(gain1);
           gain1.connect(audioCtx.destination);
-          osc1.start();
-          osc1.stop(audioCtx.currentTime + 0.35);
+          osc1.start(audioCtx.currentTime);
+          osc1.stop(audioCtx.currentTime + 0.16);
 
-          // Note 2: Deep Drop Tone (523Hz C5 -> 261Hz C4 delayed 0.08s)
+          // Drop 2: Echo Water Bubble Plop (Delayed by 0.09s, 400Hz -> 1800Hz -> 600Hz)
           const osc2 = audioCtx.createOscillator();
           const gain2 = audioCtx.createGain();
-          osc2.type = "triangle";
-          osc2.frequency.setValueAtTime(523.25, audioCtx.currentTime + 0.08);
-          osc2.frequency.exponentialRampToValueAtTime(261.63, audioCtx.currentTime + 0.55);
-          gain2.gain.setValueAtTime(0.45, audioCtx.currentTime + 0.08);
-          gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.55);
+          osc2.type = "sine";
+          const t2 = audioCtx.currentTime + 0.09;
+          osc2.frequency.setValueAtTime(400, t2);
+          osc2.frequency.exponentialRampToValueAtTime(1800, t2 + 0.06);
+          osc2.frequency.exponentialRampToValueAtTime(600, t2 + 0.15);
+          
+          gain2.gain.setValueAtTime(0.01, t2);
+          gain2.gain.linearRampToValueAtTime(0.45, t2 + 0.03);
+          gain2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.15);
+          
           osc2.connect(gain2);
           gain2.connect(audioCtx.destination);
-          osc2.start(audioCtx.currentTime + 0.08);
-          osc2.stop(audioCtx.currentTime + 0.55);
+          osc2.start(t2);
+          osc2.stop(t2 + 0.15);
         } else {
           // --- Distinct BUY CONFIRMED Audio Chime (Ascending High Bell Cha-Ching) ---
           // Note 1: Bright High Bell (987Hz - B5)
