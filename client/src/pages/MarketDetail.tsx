@@ -14,7 +14,7 @@ import {
   MousePointer2, Crosshair, Minus, Pencil, Type, Square,
   Bell, Clock, PlusCircle, MinusCircle, CheckCircle,
   XCircle, BrainCircuit, Zap, TrendingDown, ChevronRight,
-  Lock, RefreshCw, Maximize, Sparkles, Landmark
+  Lock, RefreshCw, Maximize, Sparkles, Landmark, Volume2
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent,
@@ -513,6 +513,73 @@ export default function MarketDetail() {
   }, [displayPrice, candlesRef.current?.length, instrument?.symbol]);
 
   const [base1mCandles, setBase1mCandles] = useState<any[]>([]);
+
+  // --- Browser Audio Context Auto-Unlock & Test Sound Engine ---
+  useEffect(() => {
+    const unlockAudio = () => {
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+      } catch {}
+    };
+    window.addEventListener("click", unlockAudio, { once: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+    return () => {
+      window.removeEventListener("click", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+    };
+  }, []);
+
+  const handleTestAudioSound = (type: "BUY" | "SELL" = "BUY") => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+
+      if (type === "SELL") {
+        // Liquid Water Drop Sound Test
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(320, audioCtx.currentTime);
+        osc1.frequency.exponentialRampToValueAtTime(1450, audioCtx.currentTime + 0.07);
+        osc1.frequency.exponentialRampToValueAtTime(450, audioCtx.currentTime + 0.16);
+        gain1.gain.setValueAtTime(0.01, audioCtx.currentTime);
+        gain1.gain.linearRampToValueAtTime(0.55, audioCtx.currentTime + 0.04);
+        gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.16);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(audioCtx.currentTime);
+        osc1.stop(audioCtx.currentTime + 0.16);
+      } else {
+        // BUY Cha-Ching Money Sound Test
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(987.77, audioCtx.currentTime);
+        gain1.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start();
+        osc1.stop(audioCtx.currentTime + 0.5);
+      }
+
+      toast({
+        title: `🔊 AUDIO TEST SUCCESSFUL!`,
+        description: `Browser audio unlocked! ${type === "BUY" ? "BUY Money Sound" : "SELL Water Sound"} is active & working.`,
+      });
+    } catch (err) {
+      toast({
+        title: "⚠️ Audio Permission Error",
+        description: "Click anywhere on screen to enable browser audio permissions.",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Dedicated background fetch of 1m base candles for rock-solid global Multi-Timeframe Confirmation
   useEffect(() => {
@@ -1747,7 +1814,15 @@ export default function MarketDetail() {
                 <BrainCircuit className="w-4 h-4 animate-pulse text-primary" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary">QUANTEDGE V12.1 · SMC</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handleTestAudioSound("BUY")}
+                  className="text-[8px] font-mono bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-1.5 py-0.5 rounded border border-emerald-500/30 uppercase font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                  title="Click to unlock browser audio & test sound"
+                >
+                  <Volume2 className="w-2.5 h-2.5 text-emerald-400" />
+                  TEST AUDIO
+                </button>
                 <span className="text-[8px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase font-bold">Next Candle</span>
                 <button onClick={() => setShowAiBotPopup(false)} className="text-muted-foreground hover:text-white"><Plus className="w-4 h-4 rotate-45" /></button>
               </div>
