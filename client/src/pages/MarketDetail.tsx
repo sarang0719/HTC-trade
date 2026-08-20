@@ -1790,6 +1790,50 @@ export default function MarketDetail() {
                     </div>
                   </div>
 
+                  {/* Live Market Structure Trend Direction Indicator (UP, DOWN, SIDEWAYS) */}
+                  {(() => {
+                    const candles = candlesRef.current || [];
+                    const n = candles.length;
+                    let trend: "UP" | "DOWN" | "SIDEWAYS" = "SIDEWAYS";
+                    if (n >= 10) {
+                      const last = candles[n - 1];
+                      const prev10 = candles.slice(-10);
+                      const highest = Math.max(...prev10.map(c => c.high));
+                      const lowest = Math.min(...prev10.map(c => c.low));
+                      const range = Math.max(0.00001, highest - lowest);
+                      const netMove = last.close - prev10[0].close;
+
+                      if (Math.abs(netMove) < range * 0.28) {
+                        trend = "SIDEWAYS";
+                      } else {
+                        trend = netMove > 0 ? "UP" : "DOWN";
+                      }
+                    }
+
+                    return (
+                      <div className={cn(
+                        "p-2 rounded-xl border flex items-center justify-between font-mono transition-all shadow-sm",
+                        trend === "UP"
+                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.15)]"
+                          : trend === "DOWN"
+                            ? "bg-rose-500/15 border-rose-500/40 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.15)]"
+                            : "bg-amber-500/15 border-amber-500/40 text-amber-300"
+                      )}>
+                        <div className="flex items-center gap-1.5 text-[8.5px] font-bold text-muted-foreground uppercase">
+                          <TrendingUp className={cn("w-3.5 h-3.5", trend === "UP" ? "text-emerald-400" : trend === "DOWN" ? "text-rose-400 rotate-180" : "text-amber-400")} />
+                          <span>MARKET TREND DIRECTION:</span>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-tight">
+                          {trend === "UP"
+                            ? "🚀 UP (BULLISH UPTREND)"
+                            : trend === "DOWN"
+                              ? "🔻 DOWN (BEARISH DOWNTREND)"
+                              : "↔️ SIDEWAYS / RANGING (CHOP)"}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
                   {/* Prominent Top Status Banner with Banker & Retailer Live Status Detail */}
                   <div className={cn(
                     "p-2.5 rounded-xl border flex flex-col gap-1.5 font-mono transition-all shadow-md",
